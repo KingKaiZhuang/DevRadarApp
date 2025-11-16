@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Login
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -39,6 +40,7 @@ import androidx.compose.ui.unit.dp
 fun OnboardingScreen(
     onGoogleClick: () -> Unit = {},
     onGithubClick: () -> Unit = {},
+    onGuestClick: () -> Unit = {} // 新增訪客 Callback
 ) {
     val iconSize = 64.dp
 
@@ -115,17 +117,28 @@ fun OnboardingScreen(
                 onClick = onGoogleClick
             )
 
-
             Spacer(modifier = Modifier.height(12.dp))
 
             // GitHub Login
-
             LoginButton(
                 text = "使用 GitHub 繼續",
                 icon = Icons.Default.AccountBox,
                 background = Color(0xFF1E293B),
                 textColor = Color.White,
                 onClick = onGithubClick
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // -----------------------------
+            // 新增：訪客登入按鈕
+            // -----------------------------
+            LoginButton(
+                text = "以訪客身分繼續",
+                icon = Icons.Default.Person,
+                background = Color(0xFF334155),
+                textColor = Color.White,
+                onClick = onGuestClick
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -141,6 +154,7 @@ fun OnboardingScreen(
         }
     }
 }
+
 
 
 @Composable

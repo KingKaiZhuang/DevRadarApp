@@ -10,6 +10,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.devradarapp.ui.DailySummaryScreen
 import com.example.devradarapp.ui.theme.DevRadarAppTheme
 
 class MainActivity : ComponentActivity() {
@@ -32,13 +33,18 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
     ) {
         composable("onboarding") {
             OnboardingScreen(
-                onGoogleClick = { /* TODO */ },
-                onGithubClick = { /* TODO */ }
+                onGoogleClick = { /* TODO: Google Sign-In */ },
+                onGithubClick = { /* TODO: Github Sign-In */ },
+                onGuestClick = {
+                    navController.navigate("daily") {
+                        popUpTo("onboarding") { inclusive = true }
+                    }
+                }
             )
         }
 
-        // 其他頁面
-        // composable("explore") { ExploreScreen() }
-        // composable("skills") { SkillMapScreen() }
+        composable("daily") {
+            DailySummaryScreen()
+        }
     }
 }

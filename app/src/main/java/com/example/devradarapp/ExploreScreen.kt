@@ -1,6 +1,7 @@
 package com.example.devradarapp.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -34,7 +35,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun ExploreScreen() {
+fun ExploreScreen(onArticleClick: (ExploreItem) -> Unit) {
     val background = Color(0xFF0F172A)
 
     Box(
@@ -90,7 +91,7 @@ fun ExploreScreen() {
 
             // Article Items
             items(sampleExploreItems) { item ->
-                ExploreCard(item)
+                ExploreCard(item = item, onClick = { onArticleClick(item)})
                 Spacer(modifier = Modifier.height(18.dp))
             }
         }
@@ -178,12 +179,13 @@ fun DropdownFilter(text: String) {
 }
 
 @Composable
-fun ExploreCard(item: ExploreItem) {
+fun ExploreCard(item: ExploreItem,onClick: (ExploreItem) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(Color(0xFF1E293B))
+            .clickable { onClick(item) }   // ← 新增可點擊
             .padding(20.dp)
     ) {
 
@@ -311,5 +313,5 @@ val sampleExploreItems = listOf(
 @Preview(showBackground = true, backgroundColor = 0xFF0F172A)
 @Composable
 fun ExploreScreenPreview() {
-    ExploreScreen()
+    ExploreScreen(onArticleClick = {})
 }

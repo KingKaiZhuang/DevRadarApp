@@ -10,7 +10,9 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.devradarapp.ui.ArticleDetailScreen
 import com.example.devradarapp.ui.DailySummaryScreen
+import com.example.devradarapp.ui.ExploreScreen
 import com.example.devradarapp.ui.theme.DevRadarAppTheme
 
 class MainActivity : ComponentActivity() {
@@ -31,18 +33,46 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
         navController = navController,
         startDestination = "onboarding"
     ) {
+        // --------------------------
+        // Onboarding
+        // --------------------------
         composable("onboarding") {
             OnboardingScreen(
-                onGoogleClick = { /* TODO: Google Sign-In */ },
-                onGithubClick = { /* TODO: Github Sign-In */ },
+                onGoogleClick = { /* TODO */ },
+                onGithubClick = { /* TODO */ },
                 onGuestClick = {
-                    navController.navigate("daily") {
+                    navController.navigate("explore") {
                         popUpTo("onboarding") { inclusive = true }
                     }
                 }
             )
         }
 
+        // --------------------------
+        // Explore Page
+        // --------------------------
+        composable("explore") {
+            ExploreScreen(
+                onArticleClick = { article ->
+                    navController.navigate("article_detail")
+                }
+            )
+        }
+
+        // --------------------------
+        // Article Detail Page
+        // --------------------------
+        composable("article_detail") {
+            ArticleDetailScreen(
+                onBack = { navController.popBackStack() },
+                onOpenSource = { /* TODO: open external link */ },
+                onFavorite = { /* TODO: save favorite */ }
+            )
+        }
+
+        // --------------------------
+        // Daily Summary Page (你已有)
+        // --------------------------
         composable("daily") {
             DailySummaryScreen()
         }

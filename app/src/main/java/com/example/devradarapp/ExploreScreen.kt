@@ -1,7 +1,9 @@
 package com.example.devradarapp.ui
 
+// import androidx.compose.foundation.clickable // 移除點擊相關邏輯，所以不需要此 import
+import android.content.Context
+import android.util.Log
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,11 +12,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
@@ -22,20 +22,32 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import java.io.IOException
 
+// ---------------- UI Components ----------------
+
+// 1. 移除 onArticleClick 參數
 @Composable
-fun ExploreScreen(onArticleClick: (ExploreItem) -> Unit) {
+fun ExploreScreen() {
+    val context = LocalContext.current // 取得 Context
+
+    // 載入並解析 JSON 資料，使用 remember 確保只載入一次
+    val articles: List<IThelpArticle> = remember {
+        loadArticlesFromJson(context, "ithelp_hot.json")
+    }
+
     val background = Color(0xFF0F172A)
 
     Box(
@@ -71,18 +83,6 @@ fun ExploreScreen(onArticleClick: (ExploreItem) -> Unit) {
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // Search Bar
-            item {
-                SearchBar()
-                Spacer(modifier = Modifier.height(20.dp))
-            }
-
-            // Category Tabs
-            item {
-                CategoryTabs()
-                Spacer(modifier = Modifier.height(20.dp))
-            }
-
             // Filters Row
             item {
                 FiltersRow()
@@ -90,56 +90,11 @@ fun ExploreScreen(onArticleClick: (ExploreItem) -> Unit) {
             }
 
             // Article Items
-            items(sampleExploreItems) { item ->
-                ExploreCard(item = item, onClick = { onArticleClick(item)})
+            // 使用 IThelpArticle 清單來疊代顯示
+            items(articles) { item ->
+                // 2. 移除 onClick 參數
+                ExploreCard(item = item)
                 Spacer(modifier = Modifier.height(18.dp))
-            }
-        }
-    }
-}
-
-@Composable
-fun SearchBar() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(50.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(Color(0xFF1E293B))
-            .padding(horizontal = 16.dp),
-        contentAlignment = Alignment.CenterStart
-    ) {
-        Text(
-            text = "Search skills or keywords",
-            color = Color(0xFF64748B),
-            style = MaterialTheme.typography.bodyMedium
-        )
-    }
-}
-
-@Composable
-fun CategoryTabs() {
-    val tabs = listOf("All", "Frontend", "Backend", "DevOps", "AI")
-    var selectedIndex by remember { mutableIntStateOf(0) }
-
-    Row(modifier = Modifier.fillMaxWidth()) {
-        tabs.forEachIndexed { index, text ->
-            val selected = selectedIndex == index
-
-            Box(
-                modifier = Modifier
-                    .padding(end = 12.dp)
-                    .clip(RoundedCornerShape(40.dp))
-                    .background(
-                        if (selected) Color(0xFF3B82F6)
-                        else Color(0xFF1E293B)
-                    )
-                    .padding(horizontal = 20.dp, vertical = 10.dp)
-            ) {
-                Text(
-                    text = text,
-                    color = if (selected) Color.White else Color(0xFFCBD5E1)
-                )
             }
         }
     }
@@ -178,37 +133,19 @@ fun DropdownFilter(text: String) {
     }
 }
 
+// 修改 ExploreCard
+// 2. 移除 onClick 參數和 .clickable 修飾符
 @Composable
-fun ExploreCard(item: ExploreItem,onClick: (ExploreItem) -> Unit) {
+fun ExploreCard(item: IThelpArticle) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(Color(0xFF1E293B))
-            .clickable { onClick(item) }   // ← 新增可點擊
+            // .clickable { onClick(item) } // 移除可點擊
             .padding(20.dp)
     ) {
-
-        // Source Row
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(24.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFF3B82F6))
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Text(item.source, color = Color(0xFFCBD5E1))
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            DifficultyBadge(item.level)
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Title
+        // 標題 (Title)
         Text(
             text = item.title,
             color = Color.White,
@@ -216,102 +153,116 @@ fun ExploreCard(item: ExploreItem,onClick: (ExploreItem) -> Unit) {
             fontWeight = FontWeight.Bold
         )
 
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // 作者和日期資訊 (取代原有的 Source Row/Tags)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("作者: ${item.author.split('|')[0].trim()}", // 嘗試清理作者名稱
+                color = Color(0xFF94A3B8),
+                style = MaterialTheme.typography.labelSmall
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Text("日期: ${item.date}",
+                color = Color(0xFF94A3B8),
+                style = MaterialTheme.typography.labelSmall
+            )
+        }
+
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Description
+        // 描述 (Description)
         Text(
             text = item.desc,
             color = Color(0xFF94A3B8),
             style = MaterialTheme.typography.bodySmall,
-            maxLines = 2
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Tags
+        // 統計數據 (取代 Tags)
         Row {
-            item.tags.forEach {
-                Tag(text = it)
-                Spacer(modifier = Modifier.width(8.dp))
-            }
+            Text("👍 ${item.like}", color = Color(0xFFCBD5E1), style = MaterialTheme.typography.labelSmall)
+            Spacer(modifier = Modifier.width(12.dp))
+            Text("💬 ${item.comments}", color = Color(0xFFCBD5E1), style = MaterialTheme.typography.labelSmall)
+            Spacer(modifier = Modifier.width(12.dp))
+            Text("👀 ${item.views}", color = Color(0xFFCBD5E1), style = MaterialTheme.typography.labelSmall)
         }
     }
 }
 
-@Composable
-fun DifficultyBadge(level: String) {
-    val bg = when (level) {
-        "Beginner" -> Color(0xFF16A34A)
-        "Intermediate" -> Color(0xFFEAB308)
-        "Advanced" -> Color(0xFFDC2626)
-        else -> Color(0xFF475569)
-    }
+// ... (DifficultyBadge 和 Tag 元件保持不變，因為在 ExploreCard 中未被使用)
 
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(40.dp))
-            .background(bg)
-            .padding(horizontal = 12.dp, vertical = 6.dp)
-    ) {
-        Text(
-            level,
-            color = Color.Black,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.labelSmall
-        )
-    }
-}
+// ---------------- Data Model & Logic ----------------
 
-@Composable
-fun Tag(text: String) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(40.dp))
-            .background(Color(0xFF334155))
-            .padding(horizontal = 12.dp, vertical = 6.dp)
-    ) {
-        Text(text, color = Color(0xFFCBD5E1), style = MaterialTheme.typography.bodySmall)
-    }
-}
-
-// ---------------- Sample Data ----------------
-
-data class ExploreItem(
-    val source: String,
-    val level: String,
+@Serializable
+data class IThelpArticle(
     val title: String,
     val desc: String,
-    val tags: List<String>
+    val url: String,
+    val author: String,
+    val date: String,
+    val like: String,
+    val comments: String,
+    val views: String
 )
 
-val sampleExploreItems = listOf(
-    ExploreItem(
-        "Medium",
-        "Intermediate",
-        "Mastering Asynchronous JavaScript in 2024",
-        "A deep dive into promises, async/await, and modern patterns...",
-        listOf("JavaScript", "Node.js")
-    ),
-    ExploreItem(
-        "GitHub",
-        "Beginner",
-        "A Practical Guide to Docker for Beginners",
-        "Learn the fundamentals of Docker, containers, and images...",
-        listOf("Docker", "DevOps")
-    ),
-    ExploreItem(
-        "Threads",
-        "Advanced",
-        "Optimizing React Native Performance",
-        "Explore advanced techniques for profiling and debugging...",
-        listOf("React Native", "Mobile")
+fun loadArticlesFromJson(context: Context, fileName: String): List<IThelpArticle> {
+    val TAG = "JsonDataLoader" // 定義一個 Log 標籤
+
+    val jsonString: String
+    try {
+        // 嘗試讀取 assets 資料夾中的檔案內容
+        jsonString = context.assets.open(fileName).bufferedReader().use { it.readText() }
+        Log.d(TAG, "步驟 1: 檔案 [$fileName] 讀取成功。字串長度: ${jsonString.length}")
+
+    } catch (ioException: IOException) {
+        // 讀取失敗（例如檔案不存在或路徑錯誤）
+        Log.e(TAG, "步驟 1 失敗: 讀取 assets 檔案 [$fileName] 失敗！", ioException)
+        return createDummyIThelpArticles().also {
+            Log.d(TAG, "返回 [假資料] 清單。請檢查 assets 資料夾路徑是否正確。")
+        }
+    }
+
+    return try {
+        // 嘗試解析 JSON 字串
+        // 這裡需要 kotlinx.serialization.decodeFromString
+        val articles = Json.decodeFromString<List<IThelpArticle>>(jsonString)
+        Log.d(TAG, "步驟 2: JSON 解析成功。文章數量: ${articles.size} 筆。")
+        articles
+
+    } catch (e: Exception) {
+        // 解析失敗（例如 JSON 格式錯誤或資料模型不匹配）
+        Log.e(TAG, "步驟 2 失敗: 解析 JSON 字串為 List<IThelpArticle> 失敗！", e)
+        return createDummyIThelpArticles().also {
+            Log.d(TAG, "返回 [假資料] 清單。請檢查 JSON 格式或 IThelpArticle 定義是否正確。")
+        }
+    }
+}
+
+fun createDummyIThelpArticles() : List<IThelpArticle> {
+    return listOf(
+        IThelpArticle(
+            title = "💳 用 n8n 將信用卡消費資料寫入 Google Sheets (假資料)", // 加上 (假資料) 方便辨識
+            desc = "這篇文章主要記錄如何用 n8n 把解析後的帳單資料自動寫入 Google Sheets...",
+            url = "", author = "劉小貢 | 軟體工程師", date = "2025-11-11",
+            like = "1", comments = "0", views = "1663"
+        ),
+        IThelpArticle(
+            title = "【Compose】從零開始打造自訂主題和排版 (假資料)",
+            desc = "深入探討 Material 3 的顏色系統、字體排版，以及如何用 CompositionLocal 傳遞主題。",
+            url = "", author = "邦邦小幫手", date = "2025-11-15",
+            like = "12", comments = "3", views = "2000"
+        )
     )
-)
+}
 
 // ---------------- Preview ----------------
 
 @Preview(showBackground = true, backgroundColor = 0xFF0F172A)
 @Composable
+// 3. 移除 Preview 中的參數
 fun ExploreScreenPreview() {
-    ExploreScreen(onArticleClick = {})
+    ExploreScreen()
 }

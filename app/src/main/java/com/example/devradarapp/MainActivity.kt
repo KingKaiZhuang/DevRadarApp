@@ -10,8 +10,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.devradarapp.ui.ArticleDetailScreen
-import com.example.devradarapp.ui.DailySummaryScreen
 import com.example.devradarapp.ui.ExploreScreen
 import com.example.devradarapp.ui.theme.DevRadarAppTheme
 
@@ -52,29 +50,7 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
         // Explore Page
         // --------------------------
         composable("explore") {
-            ExploreScreen(
-                onArticleClick = { article ->
-                    navController.navigate("article_detail")
-                }
-            )
-        }
-
-        // --------------------------
-        // Article Detail Page
-        // --------------------------
-        composable("article_detail") {
-            ArticleDetailScreen(
-                onBack = { navController.popBackStack() },
-                onOpenSource = { /* TODO: open external link */ },
-                onFavorite = { /* TODO: save favorite */ }
-            )
-        }
-
-        // --------------------------
-        // Daily Summary Page (你已有)
-        // --------------------------
-        composable("daily") {
-            DailySummaryScreen()
+            ExploreScreen()
         }
     }
 }

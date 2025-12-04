@@ -1,9 +1,12 @@
 package com.example.devradarapp.ui
 
-// import androidx.compose.foundation.clickable // 移除點擊相關邏輯，所以不需要此 import
 import android.content.Context
+import android.net.Uri
 import android.util.Log
+import android.widget.Toast
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,11 +15,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -36,14 +42,37 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.IOException
 
+// ---------------- Helper Function ----------------
+
+/**
+ * 使用 Custom Tabs 在 App 內開啟網頁
+ */
+fun openArticleUrl(context: Context, url: String) {
+    if (url.isBlank()) return
+
+    try {
+        val builder = CustomTabsIntent.Builder()
+        val params = androidx.browser.customtabs.CustomTabColorSchemeParams.Builder()
+            .setToolbarColor(0xFF0F172A.toInt())
+            .build()
+        builder.setDefaultColorSchemeParams(params)
+
+        val customTabsIntent = builder.build()
+        customTabsIntent.launchUrl(context, Uri.parse(url))
+    } catch (e: Exception) {
+        Log.e("Browser", "無法開啟網頁: $url", e)
+    }
+}
+
 // ---------------- UI Components ----------------
 
-// 1. 移除 onArticleClick 參數
 @Composable
-fun ExploreScreen() {
-    val context = LocalContext.current // 取得 Context
+fun ExploreScreen(
+    onProfileClick: () -> Unit = {} // 接收 MainActivity 傳來的導航事件
+) {
+    val context = LocalContext.current
 
-    // 載入並解析 JSON 資料，使用 remember 確保只載入一次
+    // 載入資料
     val articles: List<IThelpArticle> = remember {
         loadArticlesFromJson(context, "ithelp_hot.json")
     }
@@ -60,25 +89,49 @@ fun ExploreScreen() {
 
             item { Spacer(modifier = Modifier.height(32.dp)) }
 
-            // Title Row
+            // --- Title Row ---
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Explore",
+                        text = "資工 News",
                         style = MaterialTheme.typography.headlineMedium.copy(
                             color = Color.White,
                             fontWeight = FontWeight.Bold
                         )
                     )
+
                     Spacer(modifier = Modifier.weight(1f))
+
+                    // 1. 通知按鈕
                     Icon(
                         imageVector = Icons.Default.Notifications,
-                        contentDescription = null,
-                        tint = Color.White
+                        contentDescription = "Notifications",
+                        tint = Color.White,
+                        modifier = Modifier
+                            .clickable { /* TODO */ }
                     )
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    // 2. Profile 按鈕 (串接導航)
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF1E293B))
+                            .clickable { onProfileClick() }, // 觸發回呼
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AccountCircle,
+                            contentDescription = "Profile",
+                            tint = Color(0xFF94A3B8),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.height(24.dp))
             }
@@ -90,10 +143,13 @@ fun ExploreScreen() {
             }
 
             // Article Items
-            // 使用 IThelpArticle 清單來疊代顯示
             items(articles) { item ->
-                // 2. 移除 onClick 參數
-                ExploreCard(item = item)
+                ExploreCard(
+                    item = item,
+                    onClick = { url ->
+                        openArticleUrl(context, url)
+                    }
+                )
                 Spacer(modifier = Modifier.height(18.dp))
             }
         }
@@ -105,7 +161,6 @@ fun FiltersRow() {
     Row(
         verticalAlignment = Alignment.CenterVertically
     ) {
-
         DropdownFilter(text = "Latest")
         Spacer(modifier = Modifier.width(12.dp))
         DropdownFilter(text = "Beginner")
@@ -133,19 +188,20 @@ fun DropdownFilter(text: String) {
     }
 }
 
-// 修改 ExploreCard
-// 2. 移除 onClick 參數和 .clickable 修飾符
 @Composable
-fun ExploreCard(item: IThelpArticle) {
+fun ExploreCard(
+    item: IThelpArticle,
+    onClick: (String) -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(Color(0xFF1E293B))
-            // .clickable { onClick(item) } // 移除可點擊
+            .clickable { onClick(item.url) }
             .padding(20.dp)
     ) {
-        // 標題 (Title)
+        // 標題
         Text(
             text = item.title,
             color = Color.White,
@@ -155,9 +211,10 @@ fun ExploreCard(item: IThelpArticle) {
 
         Spacer(modifier = Modifier.height(6.dp))
 
-        // 作者和日期資訊 (取代原有的 Source Row/Tags)
+        // 作者和日期
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("作者: ${item.author.split('|')[0].trim()}", // 嘗試清理作者名稱
+            val authorName = item.author.split('|').firstOrNull()?.trim() ?: item.author
+            Text("作者: $authorName",
                 color = Color(0xFF94A3B8),
                 style = MaterialTheme.typography.labelSmall
             )
@@ -170,7 +227,7 @@ fun ExploreCard(item: IThelpArticle) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 描述 (Description)
+        // 描述
         Text(
             text = item.desc,
             color = Color(0xFF94A3B8),
@@ -181,7 +238,7 @@ fun ExploreCard(item: IThelpArticle) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // 統計數據 (取代 Tags)
+        // 統計
         Row {
             Text("👍 ${item.like}", color = Color(0xFFCBD5E1), style = MaterialTheme.typography.labelSmall)
             Spacer(modifier = Modifier.width(12.dp))
@@ -191,8 +248,6 @@ fun ExploreCard(item: IThelpArticle) {
         }
     }
 }
-
-// ... (DifficultyBadge 和 Tag 元件保持不變，因為在 ExploreCard 中未被使用)
 
 // ---------------- Data Model & Logic ----------------
 
@@ -209,50 +264,37 @@ data class IThelpArticle(
 )
 
 fun loadArticlesFromJson(context: Context, fileName: String): List<IThelpArticle> {
-    val TAG = "JsonDataLoader" // 定義一個 Log 標籤
-
+    val TAG = "JsonDataLoader"
     val jsonString: String
     try {
-        // 嘗試讀取 assets 資料夾中的檔案內容
         jsonString = context.assets.open(fileName).bufferedReader().use { it.readText() }
-        Log.d(TAG, "步驟 1: 檔案 [$fileName] 讀取成功。字串長度: ${jsonString.length}")
-
     } catch (ioException: IOException) {
-        // 讀取失敗（例如檔案不存在或路徑錯誤）
-        Log.e(TAG, "步驟 1 失敗: 讀取 assets 檔案 [$fileName] 失敗！", ioException)
-        return createDummyIThelpArticles().also {
-            Log.d(TAG, "返回 [假資料] 清單。請檢查 assets 資料夾路徑是否正確。")
-        }
+        Log.e(TAG, "讀取 assets 檔案 [$fileName] 失敗！", ioException)
+        return createDummyIThelpArticles()
     }
 
     return try {
-        // 嘗試解析 JSON 字串
-        // 這裡需要 kotlinx.serialization.decodeFromString
-        val articles = Json.decodeFromString<List<IThelpArticle>>(jsonString)
-        Log.d(TAG, "步驟 2: JSON 解析成功。文章數量: ${articles.size} 筆。")
-        articles
-
+        Json.decodeFromString<List<IThelpArticle>>(jsonString)
     } catch (e: Exception) {
-        // 解析失敗（例如 JSON 格式錯誤或資料模型不匹配）
-        Log.e(TAG, "步驟 2 失敗: 解析 JSON 字串為 List<IThelpArticle> 失敗！", e)
-        return createDummyIThelpArticles().also {
-            Log.d(TAG, "返回 [假資料] 清單。請檢查 JSON 格式或 IThelpArticle 定義是否正確。")
-        }
+        Log.e(TAG, "JSON 解析失敗！", e)
+        return createDummyIThelpArticles()
     }
 }
 
 fun createDummyIThelpArticles() : List<IThelpArticle> {
     return listOf(
         IThelpArticle(
-            title = "💳 用 n8n 將信用卡消費資料寫入 Google Sheets (假資料)", // 加上 (假資料) 方便辨識
+            title = "💳 用 n8n 將信用卡消費資料寫入 Google Sheets (假資料)",
             desc = "這篇文章主要記錄如何用 n8n 把解析後的帳單資料自動寫入 Google Sheets...",
-            url = "", author = "劉小貢 | 軟體工程師", date = "2025-11-11",
+            url = "https://ithelp.ithome.com.tw/",
+            author = "劉小貢 | 軟體工程師", date = "2025-11-11",
             like = "1", comments = "0", views = "1663"
         ),
         IThelpArticle(
             title = "【Compose】從零開始打造自訂主題和排版 (假資料)",
             desc = "深入探討 Material 3 的顏色系統、字體排版，以及如何用 CompositionLocal 傳遞主題。",
-            url = "", author = "邦邦小幫手", date = "2025-11-15",
+            url = "https://ithelp.ithome.com.tw/",
+            author = "邦邦小幫手", date = "2025-11-15",
             like = "12", comments = "3", views = "2000"
         )
     )
@@ -262,7 +304,11 @@ fun createDummyIThelpArticles() : List<IThelpArticle> {
 
 @Preview(showBackground = true, backgroundColor = 0xFF0F172A)
 @Composable
-// 3. 移除 Preview 中的參數
 fun ExploreScreenPreview() {
-    ExploreScreen()
+    val context = LocalContext.current
+    ExploreScreen(
+        onProfileClick = {
+            Toast.makeText(context, "點擊了 Profile", Toast.LENGTH_SHORT).show()
+        }
+    )
 }

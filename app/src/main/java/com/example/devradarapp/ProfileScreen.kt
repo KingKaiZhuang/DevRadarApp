@@ -21,9 +21,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -45,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.devradarapp.data.UserEntity
 
 // 定義顏色
 val DarkBg = Color(0xFF12141C)
@@ -58,8 +61,10 @@ val DividerColor = Color(0xFF2C303E)
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ProfileScreen(
+    currentUser: UserEntity? = null,
     onClose: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onFavoritesClick: () -> Unit = {} // 新增：點擊收藏的回呼
 ) {
     val scrollState = rememberScrollState()
 
@@ -77,9 +82,19 @@ fun ProfileScreen(
                 .verticalScroll(scrollState)
         ) {
             // 1. 個人檔案
-            ProfileSection()
+            ProfileSection(user = currentUser)
 
             Spacer(modifier = Modifier.height(32.dp))
+
+            // 新增：收藏夾按鈕 (只有登入後才顯示，或訪客點擊後提示登入)
+            if (currentUser != null) {
+                MenuButton(
+                    title = "My Favorites",
+                    icon = Icons.Default.Favorite,
+                    onClick = onFavoritesClick
+                )
+                Spacer(modifier = Modifier.height(32.dp))
+            }
 
             // 2. Areas of Interest
             Text(
@@ -88,6 +103,7 @@ fun ProfileScreen(
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
+            // ... (略，保持原有內容)
             Text(
                 text = "Select topics to personalize your article feed.",
                 color = TextGrey,
@@ -164,7 +180,11 @@ fun ProfileTopBar(onClose: () -> Unit) {
 }
 
 @Composable
-fun ProfileSection() {
+fun ProfileSection(user: UserEntity?) {
+    val displayName = user?.name ?: "Guest User"
+    val displayEmail = user?.email ?: "guest@devradar.com"
+    val displayInitials = user?.initials ?: "G"
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth()
@@ -176,20 +196,20 @@ fun ProfileSection() {
                 .background(Color(0xFFE0C4A8)),
             contentAlignment = Alignment.Center
         ) {
-            Text("AG", color = Color.Black, fontWeight = FontWeight.Bold)
+            Text(displayInitials, color = Color.Black, fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.width(16.dp))
 
         Column {
             Text(
-                text = "Andres G.",
+                text = displayName,
                 color = TextWhite,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "andres.g@email.com",
+                text = displayEmail,
                 color = TextGrey,
                 fontSize = 14.sp
             )
@@ -239,6 +259,38 @@ fun AddMoreChip() {
             text = "Add more",
             color = TextGrey,
             fontSize = 14.sp
+        )
+    }
+}
+
+// 新增：通用的選單按鈕
+@Composable
+fun MenuButton(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = CardBg)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = TextWhite
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(
+            text = title,
+            color = TextWhite,
+            fontSize = 16.sp,
+            modifier = Modifier.weight(1f)
+        )
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+            contentDescription = null,
+            tint = TextGrey,
+            modifier = Modifier.size(16.dp)
         )
     }
 }

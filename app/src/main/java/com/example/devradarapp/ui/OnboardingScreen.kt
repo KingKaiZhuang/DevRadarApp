@@ -1,3 +1,4 @@
+package com.example.devradarapp.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -174,7 +175,7 @@ fun FeatureItem(
                 .size(48.dp)
                 .clip(RoundedCornerShape(12.dp))
                 .background(Color(0xFF1E293B)),
-            contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,

@@ -1,6 +1,5 @@
 package com.example.devradarapp
 
-import OnboardingScreen
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -19,6 +18,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.devradarapp.ui.ExploreScreen
 import com.example.devradarapp.ui.FavoritesScreen
 import com.example.devradarapp.ui.LoginScreen
+import com.example.devradarapp.ui.OnboardingScreen
 import com.example.devradarapp.ui.ProfileScreen
 import com.example.devradarapp.ui.theme.DevRadarAppTheme
 import com.example.devradarapp.viewmodel.ArticleViewModel
@@ -57,6 +57,9 @@ fun AppNavHost(
     // 觀察收藏數據
     val favoriteUrls by articleViewModel.favoriteUrls.collectAsState()
     val favoritesList by articleViewModel.favoritesList.collectAsState()
+    
+    // 觀察文章列表 (新增)
+    val articles by articleViewModel.articles.collectAsState()
 
     // 當使用者狀態改變時 (例如登入成功)，載入該使用者的收藏
     LaunchedEffect(currentUser) {
@@ -111,6 +114,7 @@ fun AppNavHost(
         // --------------------------
         composable("explore") {
             ExploreScreen(
+                articles = articles, // 傳入文章列表
                 favoriteUrls = favoriteUrls, // 傳入已收藏的 URL Set
                 onProfileClick = { navController.navigate("profile") },
                 onToggleFavorite = { article ->

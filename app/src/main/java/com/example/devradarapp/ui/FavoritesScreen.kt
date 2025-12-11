@@ -36,7 +36,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.devradarapp.data.FavoriteEntity
+import com.example.devradarapp.model.FavoriteEntity
+import com.example.devradarapp.utils.BrowserUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,7 +99,7 @@ fun FavoritesScreen(
                 items(favorites) { item ->
                     FavoriteItemCard(
                         item = item,
-                        onClick = { openArticleUrl(context, item.articleUrl) },
+                        onClick = { BrowserUtils.openArticleUrl(context, item.articleUrl) },
                         onRemove = { onRemoveClick(item.articleUrl) }
                     )
                 }

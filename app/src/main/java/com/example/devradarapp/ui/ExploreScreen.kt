@@ -1,9 +1,5 @@
 package com.example.devradarapp.ui
 
-import android.content.Context
-import android.net.Uri
-import android.util.Log
-import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -30,7 +26,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,39 +35,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import java.io.IOException
-
-// ---------------- Helper Function ----------------
-
-fun openArticleUrl(context: Context, url: String) {
-    if (url.isBlank()) return
-    try {
-        val builder = CustomTabsIntent.Builder()
-        val params = androidx.browser.customtabs.CustomTabColorSchemeParams.Builder()
-            .setToolbarColor(0xFF0F172A.toInt())
-            .build()
-        builder.setDefaultColorSchemeParams(params)
-        val customTabsIntent = builder.build()
-        customTabsIntent.launchUrl(context, Uri.parse(url))
-    } catch (e: Exception) {
-        Log.e("Browser", "無法開啟網頁: $url", e)
-    }
-}
+import com.example.devradarapp.model.Article
+import com.example.devradarapp.utils.BrowserUtils
 
 // ---------------- UI Components ----------------
 
 @Composable
 fun ExploreScreen(
-    favoriteUrls: Set<String> = emptySet(), // 新增：當前已收藏的 URL 列表
+    articles: List<Article>,
+    favoriteUrls: Set<String> = emptySet(),
     onProfileClick: () -> Unit = {},
-    onToggleFavorite: (IThelpArticle) -> Unit = {} // 新增：切換收藏的回呼
+    onToggleFavorite: (Article) -> Unit = {}
 ) {
     val context = LocalContext.current
-    val articles: List<IThelpArticle> = remember {
-        loadArticlesFromJson(context, "ithelp_hot.json")
-    }
     val background = Color(0xFF0F172A)
 
     Box(
@@ -139,7 +114,7 @@ fun ExploreScreen(
                 ExploreCard(
                     item = item,
                     isFavorite = isFavorite, // 傳入狀態
-                    onClick = { url -> openArticleUrl(context, url) },
+                    onClick = { url -> BrowserUtils.openArticleUrl(context, url) },
                     onFavoriteClick = { onToggleFavorite(item) } // 傳出事件
                 )
                 Spacer(modifier = Modifier.height(18.dp))
@@ -178,7 +153,7 @@ fun DropdownFilter(text: String) {
 
 @Composable
 fun ExploreCard(
-    item: IThelpArticle,
+    item: Article,
     isFavorite: Boolean,
     onClick: (String) -> Unit,
     onFavoriteClick: () -> Unit
@@ -248,56 +223,8 @@ fun ExploreCard(
     }
 }
 
-// ---------------- Data Model & Logic ----------------
-
-@Serializable
-data class IThelpArticle(
-    val title: String,
-    val desc: String,
-    val url: String,
-    val author: String,
-    val date: String,
-    val like: String,
-    val comments: String,
-    val views: String
-)
-
-fun loadArticlesFromJson(context: Context, fileName: String): List<IThelpArticle> {
-    val TAG = "JsonDataLoader"
-    val jsonString: String
-    try {
-        jsonString = context.assets.open(fileName).bufferedReader().use { it.readText() }
-    } catch (ioException: IOException) {
-        return createDummyIThelpArticles()
-    }
-    return try {
-        Json.decodeFromString<List<IThelpArticle>>(jsonString)
-    } catch (e: Exception) {
-        return createDummyIThelpArticles()
-    }
-}
-
-fun createDummyIThelpArticles() : List<IThelpArticle> {
-    return listOf(
-        IThelpArticle(
-            title = "💳 用 n8n 將信用卡消費資料寫入 Google Sheets",
-            desc = "這篇文章主要記錄如何用 n8n 把解析後的帳單資料自動寫入 Google Sheets...",
-            url = "https://ithelp.ithome.com.tw/",
-            author = "劉小貢", date = "2025-11-11",
-            like = "1", comments = "0", views = "1663"
-        ),
-        IThelpArticle(
-            title = "【Compose】從零開始打造自訂主題和排版",
-            desc = "深入探討 Material 3 的顏色系統、字體排版。",
-            url = "https://google.com",
-            author = "邦邦小幫手", date = "2025-11-15",
-            like = "12", comments = "3", views = "2000"
-        )
-    )
-}
-
 @Preview(showBackground = true, backgroundColor = 0xFF0F172A)
 @Composable
 fun ExploreScreenPreview() {
-    ExploreScreen()
+    ExploreScreen(articles = emptyList())
 }

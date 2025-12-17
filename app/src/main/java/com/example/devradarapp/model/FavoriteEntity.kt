@@ -23,5 +23,6 @@ data class FavoriteEntity(
     val articleUrl: String,
     val title: String, // 儲存標題以便離線顯示列表
     val author: String,
-    val date: String
+    val date: String,
+    val category: String? = "Uncategorized"
 )

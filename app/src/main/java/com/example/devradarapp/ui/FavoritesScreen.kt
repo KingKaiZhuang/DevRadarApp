@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -136,6 +137,18 @@ fun FavoriteItemCard(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
+                // Category Badge (Simplified for Favorites)
+                val cat = item.category ?: "Uncategorized"
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Color(0xFF3B82F6))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(text = cat, color = Color.White, style = MaterialTheme.typography.labelSmall)
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                
                 Text(
                     text = item.author,
                     color = Color(0xFF8F9BB3),

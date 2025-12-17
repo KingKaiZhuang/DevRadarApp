@@ -88,8 +88,7 @@ fun AppNavHost(
         // --------------------------
         composable("onboarding") {
             OnboardingScreen(
-                onGoogleClick = { navController.navigate("login") },
-                onGithubClick = { navController.navigate("login") },
+                onLoginClick = { navController.navigate("login") },
                 onGuestClick = {
                     authViewModel.logout()
                     navController.navigate("explore") {

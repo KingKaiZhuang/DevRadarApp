@@ -2,6 +2,7 @@ package com.example.devradarapp.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,12 +22,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,6 +57,33 @@ fun ExploreScreen(
 ) {
     val context = LocalContext.current
     val background = Color(0xFF0F172A)
+
+    // State for date sorting
+    var isNewestFirst by remember { mutableStateOf(true) }
+
+    var selectedCategory by remember { mutableStateOf("All") }
+    
+    // Dynamically generate categories from the articles list
+    val categories = remember(articles) {
+        val allCategories = articles.mapNotNull { it.category }.distinct().sorted()
+        listOf("All") + allCategories
+    }
+
+    val filteredArticles = remember(articles, selectedCategory, isNewestFirst) {
+        var result = if (selectedCategory == "All") {
+            articles
+        } else {
+            articles.filter { it.category == selectedCategory }
+        }
+        
+        // Sort by date
+        if (isNewestFirst) {
+            result = result.sortedByDescending { it.date }
+        } else {
+            result = result.sortedBy { it.date }
+        }
+        result
+    }
 
     Box(
         modifier = Modifier
@@ -74,6 +109,16 @@ fun ExploreScreen(
                         )
                     )
                     Spacer(modifier = Modifier.weight(1f))
+                    
+                    // Sort Button
+                    IconButton(onClick = { isNewestFirst = !isNewestFirst }) {
+                        Icon(
+                            imageVector = if (isNewestFirst) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
+                            contentDescription = if (isNewestFirst) "Newest First" else "Oldest First",
+                            tint = Color.White
+                        )
+                    }
+
                     Icon(
                         imageVector = Icons.Default.Notifications,
                         contentDescription = "Notifications",
@@ -102,12 +147,16 @@ fun ExploreScreen(
 
             // Filters
             item {
-                FiltersRow()
+                FiltersRow(
+                    categories = categories,
+                    selectedCategory = selectedCategory,
+                    onCategorySelect = { selectedCategory = it }
+                )
                 Spacer(modifier = Modifier.height(26.dp))
             }
 
             // Articles
-            items(articles) { item ->
+            items(filteredArticles) { item ->
                 // 判斷此文章是否在收藏清單中
                 val isFavorite = favoriteUrls.contains(item.url)
 
@@ -124,30 +173,34 @@ fun ExploreScreen(
 }
 
 @Composable
-fun FiltersRow() {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        DropdownFilter(text = "Latest")
-        Spacer(modifier = Modifier.width(12.dp))
-        DropdownFilter(text = "Beginner")
-        Spacer(modifier = Modifier.weight(1f))
-        Text(
-            text = "Filters",
-            color = Color(0xFF3B82F6),
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(end = 6.dp)
-        )
-    }
-}
-
-@Composable
-fun DropdownFilter(text: String) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
-            .background(Color(0xFF1E293B))
-            .padding(horizontal = 14.dp, vertical = 10.dp)
+fun FiltersRow(
+    categories: List<String>,
+    selectedCategory: String,
+    onCategorySelect: (String) -> Unit
+) {
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(text, color = Color.White)
+        items(categories) { category ->
+            val isSelected = category == selectedCategory
+            val backgroundColor = if (isSelected) Color(0xFF3B82F6) else Color(0xFF1E293B)
+            val textColor = if (isSelected) Color.White else Color(0xFF94A3B8)
+
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(backgroundColor)
+                    .clickable { onCategorySelect(category) }
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
+            ) {
+                Text(
+                    text = category,
+                    color = textColor,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                )
+            }
+        }
     }
 }
 
@@ -195,9 +248,21 @@ fun ExploreCard(
         Spacer(modifier = Modifier.height(6.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
+            // Category Badge
+            val cat = item.category ?: "Uncategorized"
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(Color(0xFF3B82F6))
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            ) {
+                Text(text = cat, color = Color.White, style = MaterialTheme.typography.labelSmall)
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+
             val authorName = item.author.split('|').firstOrNull()?.trim() ?: item.author
             Text("作者: $authorName", color = Color(0xFF94A3B8), style = MaterialTheme.typography.labelSmall)
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp))
             Text("日期: ${item.date}", color = Color(0xFF94A3B8), style = MaterialTheme.typography.labelSmall)
         }
 

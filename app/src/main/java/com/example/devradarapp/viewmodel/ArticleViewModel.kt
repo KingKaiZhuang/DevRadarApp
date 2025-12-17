@@ -74,7 +74,8 @@ class ArticleViewModel(application: Application) : AndroidViewModel(application)
                     articleUrl = article.url,
                     title = article.title,
                     author = article.author,
-                    date = article.date
+                    date = article.date,
+                    category = article.category ?: "Uncategorized"
                 )
                 repository.addFavorite(newFav)
             }

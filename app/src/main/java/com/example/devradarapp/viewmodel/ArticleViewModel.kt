@@ -8,14 +8,19 @@ import com.example.devradarapp.data.ArticleRepository
 import com.example.devradarapp.model.Article
 import com.example.devradarapp.model.FavoriteEntity
 import com.example.devradarapp.model.UserEntity
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
 
 class ArticleViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: ArticleRepository
+    private val webSocketManager = com.example.devradarapp.network.WebSocketManager()
+    private var currentUserId: Int? = null
+    // Track which article the user is currently looking at
+    private var currentViewingArticleUrl: String? = null
 
     // 1. 儲存當前使用者的收藏文章 URL 集合 (用於快速判斷是否已收藏，例如顯示愛心顏色)
     private val _favoriteUrls = MutableStateFlow<Set<String>>(emptySet())
@@ -97,6 +102,9 @@ class ArticleViewModel(application: Application) : AndroidViewModel(application)
     private val _notifications = MutableStateFlow<List<com.example.devradarapp.model.Notification>>(emptyList())
     val notifications: StateFlow<List<com.example.devradarapp.model.Notification>> = _notifications.asStateFlow()
 
+    private val _newNotificationTrigger = MutableSharedFlow<Unit>()
+    val newNotificationTrigger = _newNotificationTrigger.asSharedFlow()
+
     fun loadNotifications(userId: Int) {
         viewModelScope.launch {
             val notifs = repository.getUnreadNotifications(userId)
@@ -105,11 +113,35 @@ class ArticleViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    suspend fun pollNotifications(userId: Int) {
-        while (true) {
-            loadNotifications(userId)
-            delay(30000) // 30 seconds
+
+
+    fun connectWebSocket(userId: Int) {
+        currentUserId = userId
+        webSocketManager.connect(userId)
+        webSocketManager.onMessageReceived = { message ->
+            // Simple approach: When we get a message, just reload notifications
+            // We could parse the JSON to check "type" == "NOTIFICATION"
+            if (message.contains("NOTIFICATION")) {
+                loadNotifications(userId)
+                viewModelScope.launch {
+                    _newNotificationTrigger.emit(Unit)
+                }
+            } else if (message.contains("COMMENT_UPDATE")) {
+                // If we are viewing the updated article, reload comments
+                // Need to parse JSON strictly or just check string contains url
+                // Ideally use Gson/Kotlin Serialization but keeping it simple/robust string check for MVP
+                currentViewingArticleUrl?.let { url ->
+                    if (message.contains(url)) {
+                        loadComments(url)
+                    }
+                }
+            }
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        webSocketManager.close()
     }
     
     fun markNotificationRead(notification: com.example.devradarapp.model.Notification) {
@@ -126,9 +158,15 @@ class ArticleViewModel(application: Application) : AndroidViewModel(application)
     val currentComments: StateFlow<List<com.example.devradarapp.model.Comment>> = _currentComments.asStateFlow()
 
     fun loadComments(articleUrl: String) {
+        currentViewingArticleUrl = articleUrl
         viewModelScope.launch {
             _currentComments.value = repository.getComments(articleUrl)
         }
+    }
+
+    fun clearCurrentComments() {
+        currentViewingArticleUrl = null
+        _currentComments.value = emptyList()
     }
 
     fun addComment(articleUrl: String, content: String, user: UserEntity, parentId: String? = null) {

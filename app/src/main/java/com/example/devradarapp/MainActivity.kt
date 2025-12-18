@@ -116,9 +116,17 @@ fun AppNavHost(
                     val notificationCount by articleViewModel.unreadNotificationCount.collectAsState()
                     val notifications by articleViewModel.notifications.collectAsState()
                     
-                    // Load notifications for current user (Polling)
+                    // Connect WebSocket for real-time updates
                     LaunchedEffect(currentUser) {
-                        currentUser?.let { articleViewModel.pollNotifications(it.id) }
+                        currentUser?.let { articleViewModel.connectWebSocket(it.id) }
+                    }
+                    
+                    // Show Toast on new notification
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    LaunchedEffect(Unit) {
+                        articleViewModel.newNotificationTrigger.collect {
+                            android.widget.Toast.makeText(context, "New Reply Received! 🔔", android.widget.Toast.LENGTH_SHORT).show()
+                        }
                     }
 
                     ExploreScreen(

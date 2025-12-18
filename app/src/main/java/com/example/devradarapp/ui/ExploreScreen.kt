@@ -44,7 +44,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.devradarapp.model.Article
+import com.example.devradarapp.model.Notification
 import com.example.devradarapp.utils.BrowserUtils
+import com.example.devradarapp.ui.NotificationDialog
 
 // ---------------- UI Components ----------------
 
@@ -53,10 +55,29 @@ fun ExploreScreen(
     articles: List<Article>,
     favoriteUrls: Set<String> = emptySet(),
     onProfileClick: () -> Unit = {},
-    onToggleFavorite: (Article) -> Unit = {}
+    onArticleClick: (String) -> Unit = {},
+    onToggleFavorite: (Article) -> Unit = {},
+
+    unreadNotificationCount: Int = 0,
+    notifications: List<Notification> = emptyList(),
+    onNotificationClick: (Notification) -> Unit = {},
+    onRefreshNotifications: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val background = Color(0xFF0F172A)
+    
+    var showNotificationDialog by remember { mutableStateOf(false) }
+
+    if (showNotificationDialog) {
+        NotificationDialog(
+            notifications = notifications,
+            onDismiss = { showNotificationDialog = false },
+            onNotificationClick = { notification -> 
+                 onNotificationClick(notification) 
+                 // Optionally keep dialog open or close it
+            }
+        )
+    }
 
     // State for date sorting
     var isNewestFirst by remember { mutableStateOf(true) }
@@ -119,12 +140,28 @@ fun ExploreScreen(
                         )
                     }
 
-                    Icon(
-                        imageVector = Icons.Default.Notifications,
-                        contentDescription = "Notifications",
-                        tint = Color.White,
-                        modifier = Modifier.clickable { /* TODO */ }
-                    )
+                    // Notification Icon with Badge
+                    Box {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = "Notifications",
+                            tint = Color.White,
+
+                            modifier = Modifier.clickable { 
+                                showNotificationDialog = true 
+                                onRefreshNotifications() 
+                            }
+                        )
+                        if (unreadNotificationCount > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.Red)
+                            )
+                        }
+                    }
                     Spacer(modifier = Modifier.width(16.dp))
                     Box(
                         modifier = Modifier
@@ -163,7 +200,7 @@ fun ExploreScreen(
                 ExploreCard(
                     item = item,
                     isFavorite = isFavorite, // 傳入狀態
-                    onClick = { url -> BrowserUtils.openArticleUrl(context, url) },
+                    onClick = { url -> onArticleClick(url) },
                     onFavoriteClick = { onToggleFavorite(item) } // 傳出事件
                 )
                 Spacer(modifier = Modifier.height(18.dp))
@@ -171,6 +208,7 @@ fun ExploreScreen(
         }
     }
 }
+
 
 @Composable
 fun FiltersRow(

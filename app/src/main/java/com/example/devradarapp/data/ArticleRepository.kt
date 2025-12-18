@@ -30,4 +30,55 @@ class ArticleRepository(
     suspend fun addFavorite(favorite: FavoriteEntity) = favoriteDao.addFavorite(favorite)
 
     suspend fun removeFavorite(userId: Int, articleUrl: String) = favoriteDao.removeFavorite(userId, articleUrl)
+
+    // Comment Operations (Network)
+    suspend fun getComments(articleUrl: String): List<com.example.devradarapp.model.Comment> {
+        return try {
+            com.example.devradarapp.network.RetrofitClient.instance.getComments(articleUrl)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    // Notifications (Network)
+    suspend fun getUnreadNotifications(userId: Int): List<com.example.devradarapp.model.Notification> {
+        return try {
+            com.example.devradarapp.network.RetrofitClient.instance.getNotifications(userId).filter { !it.isRead }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    suspend fun markNotificationsAsRead(userId: Int) {
+         // Identify unread ones first ideally, but for now we rely on UI to trigger read for specific ones or loop
+         // In a real app we might have a bulk endpoint.
+         // Here we will just fetch and mark all as read one by one or let UI handle it.
+         // Actually, let's just expose a method to mark ONE as read.
+    }
+    
+    suspend fun markNotificationRead(notificationId: String) {
+        try {
+            com.example.devradarapp.network.RetrofitClient.instance.markNotificationRead(notificationId)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    suspend fun addComment(articleUrl: String, comment: com.example.devradarapp.model.Comment) {
+        try {
+            com.example.devradarapp.network.RetrofitClient.instance.addComment(comment)
+            
+            // Client-side notification logic (Optimistic / Local only for now)
+            // Ideally this moves to backend or we fetch notifications from backend
+             if (comment.parentId != null) {
+                // We'd need to fetch parent comment or trust current context.
+                // For now, simplify or temporarily disable local notification gen if we don't have parent loaded.
+                // Or we can just leave it out as the user asked for COMMENT sync.
+             }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 }

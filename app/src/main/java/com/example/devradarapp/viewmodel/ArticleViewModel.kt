@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 class ArticleViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: ArticleRepository
@@ -86,6 +87,69 @@ class ArticleViewModel(application: Application) : AndroidViewModel(application)
     fun removeFavorite(userId: Int, articleUrl: String) {
         viewModelScope.launch {
             repository.removeFavorite(userId, articleUrl)
+        }
+    }
+
+    // ---------------- Notification Logic ----------------
+    private val _unreadNotificationCount = MutableStateFlow(0)
+    val unreadNotificationCount: StateFlow<Int> = _unreadNotificationCount.asStateFlow()
+
+    private val _notifications = MutableStateFlow<List<com.example.devradarapp.model.Notification>>(emptyList())
+    val notifications: StateFlow<List<com.example.devradarapp.model.Notification>> = _notifications.asStateFlow()
+
+    fun loadNotifications(userId: Int) {
+        viewModelScope.launch {
+            val notifs = repository.getUnreadNotifications(userId)
+            _notifications.value = notifs
+            _unreadNotificationCount.value = notifs.filter { !it.isRead }.size
+        }
+    }
+
+    suspend fun pollNotifications(userId: Int) {
+        while (true) {
+            loadNotifications(userId)
+            delay(30000) // 30 seconds
+        }
+    }
+    
+    fun markNotificationRead(notification: com.example.devradarapp.model.Notification) {
+        viewModelScope.launch {
+            repository.markNotificationRead(notification.id)
+            // Local update to remove from list or mark read
+            loadNotifications(notification.userId)
+        }
+    }
+
+    // ---------------- Comment Logic ----------------
+
+    private val _currentComments = MutableStateFlow<List<com.example.devradarapp.model.Comment>>(emptyList())
+    val currentComments: StateFlow<List<com.example.devradarapp.model.Comment>> = _currentComments.asStateFlow()
+
+    fun loadComments(articleUrl: String) {
+        viewModelScope.launch {
+            _currentComments.value = repository.getComments(articleUrl)
+        }
+    }
+
+    fun addComment(articleUrl: String, content: String, user: UserEntity, parentId: String? = null) {
+        viewModelScope.launch {
+            val newComment = com.example.devradarapp.model.Comment(
+                id = java.util.UUID.randomUUID().toString(),
+                articleUrl = articleUrl,
+                userId = user.id,
+                userName = user.name,
+                content = content,
+                timestamp = System.currentTimeMillis(),
+                parentId = parentId
+            )
+            repository.addComment(articleUrl, newComment)
+            // Reload to update UI
+            loadComments(articleUrl)
+            
+            // In a real app, we might get a push notification. 
+            // Here we simulate checking notifications immediately for the "other" user
+            // But since we are likely the same user testing, we can reload our own notifications to see if we got one (self-reply case)
+            loadNotifications(user.id) 
         }
     }
 }

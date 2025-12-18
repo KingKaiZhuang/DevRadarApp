@@ -111,21 +111,47 @@ fun AppNavHost(
         // --------------------------
         // Explore Page (整合收藏功能)
         // --------------------------
-        composable("explore") {
-            ExploreScreen(
-                articles = articles, // 傳入文章列表
-                favoriteUrls = favoriteUrls, // 傳入已收藏的 URL Set
-                onProfileClick = { navController.navigate("profile") },
-                onToggleFavorite = { article ->
-                    if (currentUser != null) {
-                        // 呼叫 ViewModel 切換收藏
-                        articleViewModel.toggleFavorite(currentUser, article)
-                    } else {
-                        Toast.makeText(context, "請先登入才能收藏文章", Toast.LENGTH_SHORT).show()
+                composable("explore") {
+                    // Notification State
+                    val notificationCount by articleViewModel.unreadNotificationCount.collectAsState()
+                    val notifications by articleViewModel.notifications.collectAsState()
+                    
+                    // Load notifications for current user (Polling)
+                    LaunchedEffect(currentUser) {
+                        currentUser?.let { articleViewModel.pollNotifications(it.id) }
                     }
+
+                    ExploreScreen(
+                        articles = articles, // 傳入文章列表
+                        favoriteUrls = favoriteUrls, // 傳入已收藏的 URL Set
+                        onProfileClick = { navController.navigate("profile") },
+                        onArticleClick = { url ->
+                            val encodedUrl = java.net.URLEncoder.encode(url, java.nio.charset.StandardCharsets.UTF_8.toString())
+                            navController.navigate("article_detail/$encodedUrl")
+                        },
+                        onToggleFavorite = { article ->
+                            if (currentUser != null) {
+                                // 呼叫 ViewModel 切換收藏
+                                articleViewModel.toggleFavorite(currentUser, article)
+                            } else {
+                                Toast.makeText(context, "請先登入才能收藏文章", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        unreadNotificationCount = notificationCount,
+                        notifications = notifications,
+                        onNotificationClick = { notification ->
+                            articleViewModel.markNotificationRead(notification)
+                            // Navigate to article if url exists
+                            if (notification.articleUrl != null) {
+                                val encodedUrl = java.net.URLEncoder.encode(notification.articleUrl, java.nio.charset.StandardCharsets.UTF_8.toString())
+                                navController.navigate("article_detail/$encodedUrl")
+                            }
+                        },
+                        onRefreshNotifications = {
+                            currentUser?.let { articleViewModel.loadNotifications(it.id) }
+                        }
+                    )
                 }
-            )
-        }
 
         // --------------------------
         // Profile Page
@@ -162,6 +188,22 @@ fun AppNavHost(
                         articleViewModel.removeFavorite(currentUser!!.id, articleUrl)
                     }
                 }
+            )
+        }
+
+        // --------------------------
+        // Article Detail (新增)
+        // --------------------------
+        composable("article_detail/{articleUrl}") { backStackEntry ->
+            val articleUrl = backStackEntry.arguments?.getString("articleUrl") ?: ""
+            // URL decoding might be needed if complex URLs are passed
+            val decodedUrl = java.net.URLDecoder.decode(articleUrl, java.nio.charset.StandardCharsets.UTF_8.toString())
+
+            com.example.devradarapp.ui.ArticleDetailScreen(
+                articleUrl = decodedUrl,
+                viewModel = articleViewModel,
+                currentUser = currentUser,
+                onBackClick = { navController.popBackStack() }
             )
         }
     }

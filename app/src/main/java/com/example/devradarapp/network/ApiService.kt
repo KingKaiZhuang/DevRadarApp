@@ -1,29 +1,41 @@
 package com.example.devradarapp.network
 
 import com.example.devradarapp.model.Article
+import com.example.devradarapp.model.Comment
+import com.example.devradarapp.model.Notification
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.Path
 import retrofit2.http.Query
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class TrendKeyword(
+    val text: String,
+    val value: Int
+)
 
 interface ApiService {
     @GET("articles")
     suspend fun getArticles(
-        @Query("skip") skip: Int = 0,
-        @Query("limit") limit: Int = 20
+        @Query("skip") skip: Int, 
+        @Query("limit") limit: Int,
+        @Query("category") category: String? = null
     ): List<Article>
 
-    // Comment Endpoints
     @GET("comments")
-    suspend fun getComments(@Query("articleUrl") articleUrl: String): List<com.example.devradarapp.model.Comment>
+    suspend fun getComments(@Query("articleUrl") articleUrl: String): List<Comment>
 
     @POST("comments")
-    suspend fun addComment(@Body comment: com.example.devradarapp.model.Comment): com.example.devradarapp.model.Comment
+    suspend fun addComment(@Body comment: Comment): Comment
 
-    // Notification Endpoints
     @GET("notifications")
-    suspend fun getNotifications(@Query("userId") userId: Int): List<com.example.devradarapp.model.Notification>
+    suspend fun getNotifications(@Query("userId") userId: Int): List<Notification>
 
     @POST("notifications/{id}/read")
-    suspend fun markNotificationRead(@retrofit2.http.Path("id") id: String): Map<String, String>
+    suspend fun markNotificationRead(@Path("id") id: String)
+
+    @GET("trends")
+    suspend fun getTrends(): List<TrendKeyword>
 }

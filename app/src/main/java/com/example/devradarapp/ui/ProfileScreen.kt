@@ -24,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
@@ -44,11 +45,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.devradarapp.model.UserEntity
+
+
 
 // 定義顏色
 val DarkBg = Color(0xFF12141C)
@@ -65,7 +69,8 @@ fun ProfileScreen(
     currentUser: UserEntity? = null,
     onClose: () -> Unit,
     onLogout: () -> Unit,
-    onFavoritesClick: () -> Unit = {} // 新增：點擊收藏的回呼
+    onFavoritesClick: () -> Unit = {}, // 新增：點擊收藏的回呼
+    onTrendsClick: () -> Unit = {} // New callback for trends
 ) {
     val scrollState = rememberScrollState()
 
@@ -93,6 +98,12 @@ fun ProfileScreen(
                     title = "My Favorites",
                     icon = Icons.Default.Favorite,
                     onClick = onFavoritesClick
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                MenuButton(
+                    title = "Trend Analysis",
+                    icon = Icons.AutoMirrored.Filled.TrendingUp,
+                    onClick = onTrendsClick
                 )
                 Spacer(modifier = Modifier.height(32.dp))
             }

@@ -19,6 +19,10 @@ class ArticleViewModel(application: Application) : AndroidViewModel(application)
     private val repository: ArticleRepository
     private val webSocketManager = com.example.devradarapp.network.WebSocketManager()
     private var currentUserId: Int? = null
+    // Guest ID: use negative random integer if not logged in
+    private val guestId: Int by lazy {
+        -(java.util.Random().nextInt(1000000) + 1)
+    }
     // Track which article the user is currently looking at
     private var currentViewingArticleUrl: String? = null
 
@@ -34,15 +38,56 @@ class ArticleViewModel(application: Application) : AndroidViewModel(application)
     private val _articles = MutableStateFlow<List<Article>>(emptyList())
     val articles: StateFlow<List<Article>> = _articles.asStateFlow()
 
+    // Pagination State
+    private var currentSkip = 0
+    private val pageSize = 20
+    private var isEndOfList = false
+    private var isLoadingMore = false
+
     init {
         val database = AppDatabase.getDatabase(application)
         repository = ArticleRepository(database.favoriteDao(), application)
-        loadArticles()
+        loadArticles(reset = true)
     }
 
-    private fun loadArticles() {
+    fun refreshArticles() {
+        loadArticles(reset = true)
+    }
+
+    fun loadNextPage() {
+        if (!isLoadingMore && !isEndOfList) {
+            loadArticles(reset = false)
+        }
+    }
+
+    private fun loadArticles(reset: Boolean) {
+        if (isLoadingMore) return
+        isLoadingMore = true
+        
+        if (reset) {
+            currentSkip = 0
+            isEndOfList = false
+        }
+
         viewModelScope.launch {
-            _articles.value = repository.loadArticles()
+            val newArticles = repository.loadArticles(skip = currentSkip, limit = pageSize)
+            
+            if (newArticles.isEmpty()) {
+                isEndOfList = true
+            } else {
+                // isNew logic removed
+
+
+                if (reset) {
+                    _articles.value = newArticles
+                } else {
+                    _articles.value = _articles.value + newArticles
+                }
+                
+                // Increment skip for next page
+                currentSkip += newArticles.size
+            }
+            isLoadingMore = false
         }
     }
 
@@ -115,21 +160,25 @@ class ArticleViewModel(application: Application) : AndroidViewModel(application)
 
 
 
-    fun connectWebSocket(userId: Int) {
-        currentUserId = userId
-        webSocketManager.connect(userId)
+    fun connectWebSocket(userId: Int?) {
+        val idToConnect = userId ?: guestId
+        
+        // If switching user/guest, close previous connection first
+        if (currentUserId != idToConnect) {
+            webSocketManager.close()
+        }
+        
+        currentUserId = idToConnect
+        webSocketManager.connect(idToConnect)
+        
         webSocketManager.onMessageReceived = { message ->
-            // Simple approach: When we get a message, just reload notifications
-            // We could parse the JSON to check "type" == "NOTIFICATION"
             if (message.contains("NOTIFICATION")) {
-                loadNotifications(userId)
+                // Refresh notifications (Guest will just get empty list, which is fine)
+                loadNotifications(idToConnect)
                 viewModelScope.launch {
                     _newNotificationTrigger.emit(Unit)
                 }
             } else if (message.contains("COMMENT_UPDATE")) {
-                // If we are viewing the updated article, reload comments
-                // Need to parse JSON strictly or just check string contains url
-                // Ideally use Gson/Kotlin Serialization but keeping it simple/robust string check for MVP
                 currentViewingArticleUrl?.let { url ->
                     if (message.contains(url)) {
                         loadComments(url)
@@ -189,5 +238,9 @@ class ArticleViewModel(application: Application) : AndroidViewModel(application)
             // But since we are likely the same user testing, we can reload our own notifications to see if we got one (self-reply case)
             loadNotifications(user.id) 
         }
+    }
+
+    fun getUserIdForSession(user: UserEntity?): Int {
+        return user?.id ?: guestId
     }
 }

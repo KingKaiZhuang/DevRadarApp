@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -45,8 +46,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.devradarapp.model.Article
 import com.example.devradarapp.model.Notification
-import com.example.devradarapp.utils.BrowserUtils
-import com.example.devradarapp.ui.NotificationDialog
 
 // ---------------- UI Components ----------------
 
@@ -61,7 +60,8 @@ fun ExploreScreen(
     unreadNotificationCount: Int = 0,
     notifications: List<Notification> = emptyList(),
     onNotificationClick: (Notification) -> Unit = {},
-    onRefreshNotifications: () -> Unit = {}
+    onRefreshNotifications: () -> Unit = {},
+    onLoadMore: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val background = Color(0xFF0F172A)
@@ -193,7 +193,12 @@ fun ExploreScreen(
             }
 
             // Articles
-            items(filteredArticles) { item ->
+            itemsIndexed(filteredArticles) { index, item ->
+                // Check if we need to load more
+                if (index == filteredArticles.lastIndex) {
+                    onLoadMore()
+                }
+
                 // 判斷此文章是否在收藏清單中
                 val isFavorite = favoriteUrls.contains(item.url)
 

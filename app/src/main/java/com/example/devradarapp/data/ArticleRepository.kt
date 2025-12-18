@@ -13,10 +13,10 @@ class ArticleRepository(
     private val context: Context
 ) {
 
-    suspend fun loadArticles(): List<Article> {
+    suspend fun loadArticles(skip: Int = 0, limit: Int = 20): List<Article> {
         return try {
             // Call the local API
-            com.example.devradarapp.network.RetrofitClient.instance.getArticles()
+            com.example.devradarapp.network.RetrofitClient.instance.getArticles(skip, limit)
         } catch (e: Exception) {
             e.printStackTrace()
             // Fallback to empty list or dummy data if connection fails

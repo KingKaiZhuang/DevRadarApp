@@ -45,7 +45,8 @@ import com.example.devradarapp.utils.BrowserUtils
 fun FavoritesScreen(
     favorites: List<FavoriteEntity>,
     onBackClick: () -> Unit,
-    onRemoveClick: (String) -> Unit // 傳入 articleUrl
+    onRemoveClick: (String) -> Unit, // 傳入 articleUrl
+    onArticleClick: (String) -> Unit
 ) {
     val context = LocalContext.current
     val darkBg = Color(0xFF12141C)
@@ -98,79 +99,28 @@ fun FavoritesScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 items(favorites) { item ->
-                    FavoriteItemCard(
-                        item = item,
-                        onClick = { BrowserUtils.openArticleUrl(context, item.articleUrl) },
-                        onRemove = { onRemoveClick(item.articleUrl) }
+                    // Map FavoriteEntity to Article for UI display
+                    val article = com.example.devradarapp.model.Article(
+                        title = item.title,
+                        desc = "", // No description in FavoriteEntity
+                        url = item.articleUrl,
+                        author = item.author,
+                        date = item.date,
+                        like = "-",
+                        comments = "-",
+                        views = "-",
+                        category = item.category
+                    )
+
+                    ExploreCard(
+                        item = article,
+                        isFavorite = true, // Always favorite in this screen
+                        onClick = { _ -> onArticleClick(item.articleUrl) },
+                        onFavoriteClick = { onRemoveClick(item.articleUrl) }
                     )
                 }
             }
         }
     }
 }
-
-@Composable
-fun FavoriteItemCard(
-    item: FavoriteEntity,
-    onClick: () -> Unit,
-    onRemove: () -> Unit
-) {
-    val cardBg = Color(0xFF1C1F2A)
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(cardBg)
-            .clickable { onClick() }
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = item.title,
-                color = Color.White,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Category Badge (Simplified for Favorites)
-                val cat = item.category ?: "Uncategorized"
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(Color(0xFF3B82F6))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                ) {
-                    Text(text = cat, color = Color.White, style = MaterialTheme.typography.labelSmall)
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                
-                Text(
-                    text = item.author,
-                    color = Color(0xFF8F9BB3),
-                    fontSize = 12.sp
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = item.date,
-                    color = Color(0xFF8F9BB3),
-                    fontSize = 12.sp
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        IconButton(onClick = onRemove) {
-            Icon(
-                imageVector = Icons.Default.Delete,
-                contentDescription = "Remove",
-                tint = Color(0xFFEB5757) // 紅色刪除圖示
-            )
-        }
-    }
-}
+// FavoriteItemCard removed

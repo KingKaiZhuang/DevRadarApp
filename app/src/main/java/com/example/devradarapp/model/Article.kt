@@ -15,5 +15,6 @@ data class Article(
     @SerializedName("comment_count") val comments: String,
     @SerializedName("view_count") val views: String,
     @SerializedName("is_bookmarked") val isBookmarked: Boolean = false,
-    @SerializedName("category") val category: String? = "Uncategorized"
+    @SerializedName("category") val category: String? = "Uncategorized",
+
 )

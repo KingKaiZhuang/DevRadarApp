@@ -33,10 +33,12 @@ class MainActivity : ComponentActivity() {
                 // 初始化 ViewModels
                 val authViewModel: AuthViewModel = viewModel()
                 val articleViewModel: ArticleViewModel = viewModel()
+                val trendViewModel: com.example.devradarapp.viewmodel.TrendViewModel = viewModel()
 
                 AppNavHost(
                     authViewModel = authViewModel,
-                    articleViewModel = articleViewModel
+                    articleViewModel = articleViewModel,
+                    trendViewModel = trendViewModel
                 )
             }
         }
@@ -47,7 +49,8 @@ class MainActivity : ComponentActivity() {
 fun AppNavHost(
     navController: NavHostController = rememberNavController(),
     authViewModel: AuthViewModel,
-    articleViewModel: ArticleViewModel
+    articleViewModel: ArticleViewModel,
+    trendViewModel: com.example.devradarapp.viewmodel.TrendViewModel
 ) {
     val context = LocalContext.current
 
@@ -116,9 +119,9 @@ fun AppNavHost(
                     val notificationCount by articleViewModel.unreadNotificationCount.collectAsState()
                     val notifications by articleViewModel.notifications.collectAsState()
                     
-                    // Connect WebSocket for real-time updates
+                    // Connect WebSocket for real-time updates (Logged in OR Guest)
                     LaunchedEffect(currentUser) {
-                        currentUser?.let { articleViewModel.connectWebSocket(it.id) }
+                        articleViewModel.connectWebSocket(currentUser?.id)
                     }
                     
                     // Show Toast on new notification
@@ -157,6 +160,9 @@ fun AppNavHost(
                         },
                         onRefreshNotifications = {
                             currentUser?.let { articleViewModel.loadNotifications(it.id) }
+                        },
+                        onLoadMore = {
+                            articleViewModel.loadNextPage()
                         }
                     )
                 }
@@ -177,7 +183,21 @@ fun AppNavHost(
                 onFavoritesClick = {
                     // 導航至收藏頁面
                     navController.navigate("favorites")
+                },
+                onTrendsClick = {
+                    navController.navigate("trends")
                 }
+            )
+        }
+        
+        composable("trends") {
+            val keywords by trendViewModel.keywords.collectAsState()
+            val isLoading by trendViewModel.isLoading.collectAsState()
+            
+            com.example.devradarapp.ui.TrendScreen(
+                keywords = keywords,
+                isLoading = isLoading,
+                onBackClick = { navController.popBackStack() }
             )
         }
 
@@ -195,6 +215,10 @@ fun AppNavHost(
                     if (currentUser != null) {
                         articleViewModel.removeFavorite(currentUser!!.id, articleUrl)
                     }
+                },
+                onArticleClick = { url ->
+                    val encodedUrl = java.net.URLEncoder.encode(url, java.nio.charset.StandardCharsets.UTF_8.toString())
+                    navController.navigate("article_detail/$encodedUrl")
                 }
             )
         }

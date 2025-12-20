@@ -105,6 +105,8 @@ fun ArticleDetailScreen(
                         Text("Read Full Article in Browser")
                     }
                     Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
                     Text("Comments", style = MaterialTheme.typography.titleLarge, color = Color.White)
                     Spacer(modifier = Modifier.height(8.dp))
                 }

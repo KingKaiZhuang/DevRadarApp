@@ -57,7 +57,7 @@ class WebSocketManager {
         webSocket?.close(1000, "User logout or app close")
         webSocket = null
         // OkHttp 3.x compatibility: use method calls
-        client?.dispatcher()?.executorService()?.shutdown()
+        client?.dispatcher?.executorService?.shutdown()
         client = null
     }
 }

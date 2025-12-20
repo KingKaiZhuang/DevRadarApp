@@ -9,5 +9,6 @@ data class UserEntity(
     val email: String,
     val password: String,
     val name: String,
-    val initials: String
+    val initials: String,
+    val avatarUrl: String? = null
 )

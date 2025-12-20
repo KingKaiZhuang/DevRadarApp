@@ -8,12 +8,20 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
+import retrofit2.http.Multipart
+import retrofit2.http.Part
+import okhttp3.MultipartBody
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class TrendKeyword(
     val text: String,
     val value: Int
+)
+
+@Serializable
+data class UploadResponse(
+    val url: String
 )
 
 interface ApiService {
@@ -38,4 +46,11 @@ interface ApiService {
 
     @GET("trends")
     suspend fun getTrends(): List<TrendKeyword>
+
+    @Multipart
+    @POST("users/{userId}/avatar")
+    suspend fun uploadAvatar(
+        @Path("userId") userId: Int,
+        @Part file: MultipartBody.Part
+    ): UploadResponse
 }

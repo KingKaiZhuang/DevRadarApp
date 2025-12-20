@@ -32,12 +32,16 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     private fun checkSavedLogin() {
         val savedUserId = prefs.getInt("logged_in_user_id", -1)
         if (savedUserId != -1) {
-            viewModelScope.launch {
-                val user = userDao.getUserById(savedUserId)
-                if (user != null) {
-                    _currentUser.value = user
-                    _loginState.value = LoginStatus.Success
-                }
+            refreshUser(savedUserId)
+        }
+    }
+
+    fun refreshUser(userId: Int) {
+        viewModelScope.launch {
+            val user = userDao.getUserById(userId)
+            if (user != null) {
+                _currentUser.value = user
+                _loginState.value = LoginStatus.Success
             }
         }
     }

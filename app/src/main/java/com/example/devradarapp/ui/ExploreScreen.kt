@@ -267,6 +267,7 @@ fun ExploreCard(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Top
         ) {
+            // Title
             Text(
                 text = item.title,
                 color = Color.White,
@@ -289,8 +290,24 @@ fun ExploreCard(
         }
 
         Spacer(modifier = Modifier.height(6.dp))
-
+        
+        // Tag Row: Source + Category
         Row(verticalAlignment = Alignment.CenterVertically) {
+            // Source Badge
+            val source = item.source ?: "Unknown"
+            val sourceColor = if (source.equals("Threads", ignoreCase = true)) Color.Black else Color(0xFF007bff) // Black for Threads, Blue for iThome
+            val sourceTextColor = Color.White
+            
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(sourceColor)
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            ) {
+                Text(text = source, color = sourceTextColor, style = MaterialTheme.typography.labelSmall)
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+
             // Category Badge
             val cat = item.category ?: "Uncategorized"
             Box(
@@ -311,23 +328,18 @@ fun ExploreCard(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // Description (Adjusted for Threads)
+        val descColor = if (item.source == "Threads") Color(0xFFE2E8F0) else Color(0xFF94A3B8)
+        val descMaxLines = if (item.source == "Threads") 6 else 3
+
         Text(
             text = item.desc,
-            color = Color(0xFF94A3B8),
+            color = descColor,
             style = MaterialTheme.typography.bodySmall,
-            maxLines = 3,
+            maxLines = descMaxLines,
             overflow = TextOverflow.Ellipsis
         )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Row {
-            Text("👍 ${item.like}", color = Color(0xFFCBD5E1), style = MaterialTheme.typography.labelSmall)
-            Spacer(modifier = Modifier.width(12.dp))
-            Text("💬 ${item.comments}", color = Color(0xFFCBD5E1), style = MaterialTheme.typography.labelSmall)
-            Spacer(modifier = Modifier.width(12.dp))
-            Text("👀 ${item.views}", color = Color(0xFFCBD5E1), style = MaterialTheme.typography.labelSmall)
-        }
+        // Metrics Row removed as no longer provided by backend
     }
 }
 

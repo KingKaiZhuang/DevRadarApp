@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import com.example.devradarapp.model.FavoriteEntity
 import com.example.devradarapp.model.UserEntity
 
-@Database(entities = [UserEntity::class, FavoriteEntity::class], version = 4, exportSchema = false)
+@Database(entities = [UserEntity::class, FavoriteEntity::class], version = 5, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun favoriteDao(): FavoriteDao

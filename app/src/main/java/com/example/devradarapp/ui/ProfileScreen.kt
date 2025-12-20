@@ -51,6 +51,18 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.devradarapp.model.UserEntity
+// ViewModel imports
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.devradarapp.viewmodel.ProfileViewModel
+import com.example.devradarapp.viewmodel.UploadState
+import com.example.devradarapp.viewmodel.AuthViewModel
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
+import androidx.compose.material3.CircularProgressIndicator
 
 
 
@@ -70,9 +82,32 @@ fun ProfileScreen(
     onClose: () -> Unit,
     onLogout: () -> Unit,
     onFavoritesClick: () -> Unit = {}, // 新增：點擊收藏的回呼
-    onTrendsClick: () -> Unit = {} // New callback for trends
+    onTrendsClick: () -> Unit = {}, // New callback for trends
+    // In real app, we might injected viewModel via Hilt, here using default factories provided by compose
+    authViewModel: AuthViewModel = viewModel(),
+    profileViewModel: ProfileViewModel = viewModel()
 ) {
     val scrollState = rememberScrollState()
+    val context = LocalContext.current
+    
+    val uploadState by profileViewModel.uploadState.collectAsState()
+    
+    // Photo Picker
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri ->
+            if (uri != null && currentUser != null) {
+                profileViewModel.uploadAvatar(uri, currentUser.id) {
+                    authViewModel.refreshUser(currentUser.id)
+                    Toast.makeText(context, "Profile picture updated!", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    )
+    
+    // Handle Loading State overlay or similar?
+    // For now, simpler: show indicator on top or inside ProfileSection?
+    // Let's just pass `onImageClick` to ProfileSection.
 
     Scaffold(
         containerColor = DarkBg,
@@ -88,7 +123,27 @@ fun ProfileScreen(
                 .verticalScroll(scrollState)
         ) {
             // 1. 個人檔案
-            ProfileSection(user = currentUser)
+            ProfileSection(
+                user = currentUser, 
+                onImageClick = {
+                     photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                }
+            )
+            
+            if (uploadState is UploadState.Loading) {
+                 Row(verticalAlignment = Alignment.CenterVertically) {
+                     CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                     Spacer(modifier = Modifier.width(8.dp))
+                     Text("Uploading...", color = TextGrey)
+                 }
+            }
+            if (uploadState is UploadState.Error) {
+                Text(
+                    text = (uploadState as UploadState.Error).message, 
+                    color = LogoutRed, 
+                    fontSize = 12.sp
+                )
+            }
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -192,10 +247,14 @@ fun ProfileTopBar(onClose: () -> Unit) {
 }
 
 @Composable
-fun ProfileSection(user: UserEntity?) {
+fun ProfileSection(
+    user: UserEntity?, 
+    onImageClick: () -> Unit = {}
+) {
     val displayName = user?.name ?: "Guest User"
     val displayEmail = user?.email ?: "guest@devradar.com"
     val displayInitials = user?.initials ?: "G"
+    val avatarUrl = user?.avatarUrl
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -205,10 +264,32 @@ fun ProfileSection(user: UserEntity?) {
             modifier = Modifier
                 .size(64.dp)
                 .clip(CircleShape)
-                .background(Color(0xFFE0C4A8)),
+                .background(Color(0xFFE0C4A8))
+                .clickable { onImageClick() },
             contentAlignment = Alignment.Center
         ) {
-            Text(displayInitials, color = Color.Black, fontWeight = FontWeight.Bold)
+            if (avatarUrl != null) {
+                // Use Coil AsyncImage
+                // Note: Need to prepend base URL if it's relative?
+                // The backend saves "static/uploads/...", but Retrofit BaseURL is http://10.0.2.2:8000/
+                // So full URL is http://10.0.2.2:8000/static/uploads/...
+                // My database.update_user_avatar saves "/static/uploads/..." (with leading slash)
+                // So logic: BaseURL (without slash at end if we want) + string.
+                // Retrofit BASE_URL is "http://10.0.2.2:8000/"
+                // avatarUrl is "/static/uploads/..."
+                // Concatenation: "http://10.0.2.2:8000//static..." -> double slash is fine usually but let's be cleaner if we can.
+                // Or just use full URL.
+                val fullUrl = if (avatarUrl.startsWith("http")) avatarUrl else "http://10.0.2.2:8000$avatarUrl"
+                
+                coil.compose.AsyncImage(
+                    model = fullUrl,
+                    contentDescription = "Profile Picture",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                )
+            } else {
+                Text(displayInitials, color = Color.Black, fontWeight = FontWeight.Bold)
+            }
         }
 
         Spacer(modifier = Modifier.width(16.dp))

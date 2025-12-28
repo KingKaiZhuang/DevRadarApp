@@ -1,37 +1,50 @@
-# DevRadar App 📱
+# DevRadar App 專案說明文件
 
-**DevRadar** 是一款使用 **Jetpack Compose** 建構的現代化 Android 應用程式，專門彙整並顯示來自 iThome 的開發者新聞。它具備簡潔的深色主題介面、離線收藏功能以及智慧文章分類。
+## AI 使用範圍聲明
 
-## ✨ 功能特色
+本專案在開發過程中使用了人工智慧 (AI) 工具協助，具體使用範圍如下：
 
-### 📰 文章探索
-- **每日熱門新聞**：從 DevRadar API 獲取最新的熱門文章。
-- **動態分類**：文章會自動標記分類（例如：`Frontend`、`Backend`、`AI/Data`、`Mobile`）。
-- **互動式篩選**：使用動態標籤按類別篩選文章。沒有文章的分類會自動隱藏。
-- **日期排序**：可切換「最新優先」或「最舊優先」以尋找您感興趣的內容。
+1. **程式碼輔助**：協助生成基礎樣板代碼 (Boilerplate Code)、Jetpack Compose UI 元件、以及 Room 資料庫設定。
+2. **問題排查**：協助分析並解決編譯錯誤 (Compilation Errors) 與執行時期錯誤 (Runtime Exceptions)。
+3. **功能實作**：提供特定功能（如 RecyclerView 到 LazyColumn 的遷移、導航圖設定）的實作建議與範例。
+4. **文檔撰寫**：協助撰寫與格式化專案 README 文件。
 
-### ❤️ 智慧收藏
-- **離線存取**：收藏的文章使用 **Room Database** 本地儲存，隨時可讀。
-- **分類保留**：即使在離線狀態下，收藏的文章也會保留其分類標籤。
-- **輕鬆管理**：直接從探索頁面或專用的收藏頁面新增或移除最愛文章。
+> 聲明：雖然使用了 AI 協助，但在整合至專案前，所有程式碼與設計皆經過人工審閱、修改與測試，以確保其正確性與符合專案需求。
 
-### 🎨 現代化 UI/UX
-- **Jetpack Compose**：完全使用 Compose 構建，確保流暢、反應靈敏且現代的使用者介面。
-- **深色模式**：專為開發者設計的深色石板色調（`#0F172A`），長時間閱讀也不累。
-- **Material 3**：採用最新的 Material Design 設計元件。
+## 專案簡介
 
-## 🛠️ 技術堆疊
+DevRadar 是一款使用 Jetpack Compose 建構的現代化 Android 應用程式，專門彙整並顯示來自 iThome 的開發者新聞。它具備簡潔的深色主題介面、離線收藏功能以及智慧文章分類。
 
-- **語言**: [Kotlin](https://kotlinlang.org/)
-- **UI 工具包**: [Jetpack Compose](https://developer.android.com/jetpack/compose)
-- **架構**: MVVM (Model-View-ViewModel)
-- **網路連線**: [Retrofit](https://square.github.io/retrofit/) + Gson
-- **本地儲存**: [Room Database](https://developer.android.com/training/data-storage/room) (SQLite)
-- **非同步處理**: Kotlin Coroutines & Flow
+## 功能特色
 
-## 📂 專案結構
+### 文章探索
+* **每日熱門新聞**：從 DevRadar API 獲取最新的熱門文章。
+* **動態分類**：文章會自動標記分類（例如：Frontend、Backend、AI/Data、Mobile）。
+* **互動式篩選**：使用動態標籤按類別篩選文章。沒有文章的分類會自動隱藏。
+* **日期排序**：可切換「最新優先」或「最舊優先」以尋找感興趣的內容。
 
-```
+### 智慧收藏
+* **離線存取**：收藏的文章使用 Room Database 本地儲存，隨時可讀。
+* **分類保留**：即使在離線狀態下，收藏的文章也會保留其分類標籤。
+* **輕鬆管理**：直接從探索頁面或專用的收藏頁面新增或移除最愛文章。
+
+### 現代化 UI/UX
+* **Jetpack Compose**：完全使用 Compose 構建，確保流暢、反應靈敏且現代的使用者介面。
+* **深色模式**：專為開發者設計的深色石板色調（#0F172A），長時間閱讀也不易疲勞。
+* **Material 3**：採用最新的 Material Design 設計元件。
+
+## 技術堆疊
+
+* **語言**: Kotlin
+* **UI 工具包**: Jetpack Compose
+* **架構**: MVVM (Model-View-ViewModel)
+* **網路連線**: Retrofit + Gson
+* **本地儲存**: Room Database (SQLite)
+* **非同步處理**: Kotlin Coroutines & Flow
+
+## 專案結構
+
+```text
 com.example.devradarapp
 ├── data/
 │   ├── AppDatabase.kt       # Room 資料庫設定
@@ -55,21 +68,3 @@ com.example.devradarapp
 │   └── ArticleViewModel.kt  # 文章與收藏的狀態管理
 └── utils/
     └── BrowserUtils.kt      # Chrome Custom Tabs 輔助工具
-```
-
-## 🚀 快速開始
-
-1.  **後端設定**：確保 Python Scraper API 正在運行。（請參閱後端 `README.md`）。
-    *   *注意：如果在實體設備上運行，請使用您的本地 IP 位址更新 `RetrofitInstance.kt`。*
-2.  **在 Android Studio 中開啟**：從根目錄匯入專案。
-3.  **同步 Gradle**：允許 Android Studio 下載所有依賴項。
-4.  **運行**：選擇模擬器或已連接的設備，然後點擊 **Run**。
-
-## 🔄 近期更新
-
-*   **v1.1**: 新增伺服器端文章分類功能。
-*   **v1.2**: 實作客戶端分類篩選與日期排序功能。
-*   **v1.3**: 遷移至僅客戶端收藏模式 (Room DB v4)。
-
----
-*Built for developers, by developers.*

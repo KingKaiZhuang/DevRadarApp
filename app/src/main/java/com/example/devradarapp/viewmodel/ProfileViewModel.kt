@@ -30,28 +30,48 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     private val _uploadState = MutableStateFlow<UploadState>(UploadState.Idle)
     val uploadState: StateFlow<UploadState> = _uploadState.asStateFlow()
 
+    // 資料來源偏好設定
+    private val prefs = application.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+    
+    // 如果未設定預設為 true
+    private val _isIThomeEnabled = MutableStateFlow(prefs.getBoolean("source_ithome", true))
+    val isIThomeEnabled: StateFlow<Boolean> = _isIThomeEnabled.asStateFlow()
+
+    private val _isThreadsEnabled = MutableStateFlow(prefs.getBoolean("source_threads", true))
+    val isThreadsEnabled: StateFlow<Boolean> = _isThreadsEnabled.asStateFlow()
+
+    fun toggleIThome(enabled: Boolean) {
+        _isIThomeEnabled.value = enabled
+        prefs.edit().putBoolean("source_ithome", enabled).apply()
+    }
+
+    fun toggleThreads(enabled: Boolean) {
+        _isThreadsEnabled.value = enabled
+        prefs.edit().putBoolean("source_threads", enabled).apply()
+    }
+
     fun uploadAvatar(uri: Uri, userId: Int, onSuccess: () -> Unit) {
         viewModelScope.launch {
             _uploadState.value = UploadState.Loading
             try {
-                // 1. Compress Image
+                // 1. 壓縮圖片
                 val file = compressImage(uri)
                 if (file == null) {
                     _uploadState.value = UploadState.Error("Failed to process image")
                     return@launch
                 }
 
-                // 2. Prepare Multipart
+                // 2. 準備 Multipart
                 val requestFile = file.asRequestBody("image/jpeg".toMediaTypeOrNull())
                 val body = MultipartBody.Part.createFormData("file", file.name, requestFile)
 
-                // 3. Upload
+                // 3. 上傳
                 val response = apiService.uploadAvatar(userId, body)
 
-                // 4. Update Local DB
+                // 4. 更新本地資料庫
                 userDao.updateAvatar(userId, response.url)
                 
-                // 5. Success
+                // 5. 成功
                 _uploadState.value = UploadState.Success
                 onSuccess()
                 
@@ -69,7 +89,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
             if (originalBitmap == null) return@withContext null
 
-            // Resize if too large (e.g., > 1024x1024)
+            // 如果太大則調整大小 (例如 > 1024x1024)
             val maxDimension = 1024
             var width = originalBitmap.width
             var height = originalBitmap.height
@@ -85,7 +105,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 originalBitmap
             }
 
-            // Compress to File
+            // 壓縮至檔案
             val cacheDir = context.cacheDir
             val file = File(cacheDir, "avatar_temp.jpg")
             val outputStream = FileOutputStream(file)

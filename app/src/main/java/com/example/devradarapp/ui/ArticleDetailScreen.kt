@@ -2,6 +2,8 @@ package com.example.devradarapp.ui
 
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,7 +30,7 @@ import androidx.compose.ui.unit.sp
 import com.example.devradarapp.model.Article
 import com.example.devradarapp.model.Comment
 import com.example.devradarapp.model.UserEntity
-import com.example.devradarapp.utils.BrowserUtils
+
 import com.example.devradarapp.viewmodel.ArticleViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -42,13 +45,12 @@ fun ArticleDetailScreen(
 ) {
     val context = LocalContext.current
     
-    // Find the article from the ViewModel's list
+    // 從 ViewModel 列表中尋找文章
     val articles by viewModel.articles.collectAsState()
-    // Decode URL if necessary, but here we assume simple matching or passed correctly
-    // In a real app, URL encoding/decoding is crucial. For now we try straight match.
+    // 尋找文章
     val article = articles.find { it.url == articleUrl }
 
-    // Load comments when entering the screen
+    // 進入頁面時載入留言
     LaunchedEffect(articleUrl) {
         viewModel.loadComments(articleUrl)
     }
@@ -63,10 +65,16 @@ fun ArticleDetailScreen(
         return
     }
 
-    // State for replying
+    // 回覆狀態
     var replyToComment by remember { mutableStateOf<Comment?>(null) }
+    
+    // AI 對話框狀態
+    var showAiDialog by remember { mutableStateOf(false) }
+    var aiPrompt by remember { mutableStateOf("") }
+    val aiResponse by viewModel.aiResponse.collectAsState()
+    val isAiLoading by viewModel.isAiLoading.collectAsState()
 
-    // Structure comments: Parent -> List<Reply>
+    // 留言結構：父留言 -> List<回覆>
     val topLevelComments = remember(comments) { comments.filter { it.parentId == null }.sortedByDescending { it.timestamp } }
     val repliesMap = remember(comments) { comments.filter { it.parentId != null }.groupBy { it.parentId } }
 
@@ -82,35 +90,111 @@ fun ArticleDetailScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0F172A))
             )
         },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = { showAiDialog = true },
+                icon = { Icon(Icons.Default.Star, contentDescription = "AI Assistant") },
+                text = { Text("AI Assistant") },
+                containerColor = Color(0xFF8B5CF6), // 紫色代表 AI 風格
+                contentColor = Color.White
+            )
+        },
         containerColor = Color(0xFF0F172A)
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
         ) {
-            // Article Content (Scrollable)
             LazyColumn(
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentPadding = PaddingValues(16.dp)
             ) {
+                // 1. 文章標題
                 item {
-                    ArticleHeader(article)
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = article.title,
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+
+                // 2. 文章資訊
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "${article.source} • ${article.date ?: ""}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF94A3B8)
+                        )
+                        Text(
+                            text = article.author ?: "",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF94A3B8)
+                        )
+                    }
+                }
+
+                // 3. 文章內容
+                item {
+                    Text(
+                        text = article.desc ?: "No content available",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color(0xFFE2E8F0),
+                        lineHeight = 24.sp
+                    )
+                }
+
+                // 4. 連結按鈕
+                item {
+                    Spacer(modifier = Modifier.height(24.dp))
                     Button(
-                        onClick = { BrowserUtils.openArticleUrl(context, article.url) },
+                        onClick = {
+                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(article.url))
+                            context.startActivity(intent)
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6))
                     ) {
-                        Text("Read Full Article in Browser")
+                        Text(text = "Read Full Article in Browser")
                     }
                     Spacer(modifier = Modifier.height(24.dp))
-                    Spacer(modifier = Modifier.height(24.dp))
-                    
-                    Text("Comments", style = MaterialTheme.typography.titleLarge, color = Color.White)
-                    Spacer(modifier = Modifier.height(8.dp))
                 }
 
+                // 5. 留言標題與輸入框
+                item {
+                    Text(
+                        text = "Comments",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                        modifier = Modifier.padding(vertical = 16.dp)
+                    )
+                    
+                    CommentInputArea(
+                        replyTo = replyToComment,
+                        onCancelReply = { replyToComment = null },
+                        onSend = { text ->
+                            if (currentUser != null) {
+                                viewModel.addComment(article.url, text, currentUser, replyToComment?.id)
+                                replyToComment = null
+                            } else {
+                                Toast.makeText(context, "Please login to comment", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                // 6. 留言列表 (項目)
                 items(topLevelComments) { comment ->
                     val replies = repliesMap[comment.id] ?: emptyList()
                     CommentItem(
@@ -118,32 +202,81 @@ fun ArticleDetailScreen(
                         replies = replies,
                         onReplyClick = { parent -> replyToComment = parent }
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
-                }
-                
-                if (comments.isEmpty()) {
-                    item {
-                        Text("No comments yet. Be the first!", color = Color.Gray, modifier = Modifier.padding(vertical = 12.dp))
-                    }
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
+        }
 
-            // Comment Input Area
-            CommentInputArea(
-                replyTo = replyToComment,
-                onCancelReply = { replyToComment = null },
-                onSend = { text ->
-                    if (currentUser != null) {
-                        viewModel.addComment(article.url, text, currentUser, replyToComment?.id)
-                        replyToComment = null
+        if (showAiDialog) {
+            AlertDialog(
+                onDismissRequest = { 
+                    showAiDialog = false 
+                    viewModel.clearAiResponse()
+                },
+                title = { Text("✨ AI Assistant") },
+                text = {
+                    Column {
+                        if (aiResponse == null && !isAiLoading) {
+                            Text("Ask something about this article:")
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = aiPrompt,
+                                onValueChange = { aiPrompt = it },
+                                label = { Text("Question") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            // 建議
+                            Row(modifier = Modifier.padding(top = 8.dp)) {
+                                Button(onClick = { aiPrompt = "Summarize this article" }, modifier = Modifier.padding(end = 4.dp)) {
+                                    Text("Summarize", fontSize = 10.sp)
+                                }
+                                Button(onClick = { aiPrompt = "Explain basic concepts" }) {
+                                    Text("Explain", fontSize = 10.sp)
+                                }
+                            }
+                        } else if (isAiLoading) {
+                            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator()
+                            }
+                        } else {
+                           // 顯示回應
+                           Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                               Text(aiResponse ?: "", style = MaterialTheme.typography.bodyMedium)
+                           }
+                        }
+                    }
+                },
+                confirmButton = {
+                    if (aiResponse == null && !isAiLoading) {
+                        Button(onClick = {
+                            if (aiPrompt.isNotBlank()) {
+                                viewModel.askAi(aiPrompt, article.desc ?: article.title) // 使用描述或回退到標題
+                            }
+                        }) {
+                            Text("Ask AI")
+                        }
                     } else {
-                        Toast.makeText(context, "Please login to comment", Toast.LENGTH_SHORT).show()
+                         Button(onClick = { 
+                             showAiDialog = false
+                             viewModel.clearAiResponse()
+                             aiPrompt = "" // 重置提示
+                         }) {
+                             Text("Close")
+                         }
+                    }
+                },
+                dismissButton = {
+                    if (aiResponse == null && !isAiLoading) {
+                        TextButton(onClick = { showAiDialog = false }) {
+                            Text("Cancel")
+                        }
                     }
                 }
             )
         }
     }
 }
+
 
 @Composable
 fun ArticleHeader(article: Article) {
@@ -190,12 +323,12 @@ fun CommentItem(
         Spacer(modifier = Modifier.height(4.dp))
         Text(text = comment.content, color = Color.White)
         
-        // Reply Button
+        // 回覆按鈕
         TextButton(onClick = { onReplyClick(comment) }) {
             Text("Reply", color = Color(0xFF94A3B8), fontSize = 12.sp)
         }
 
-        // Replies
+        // 回覆列表
         if (replies.isNotEmpty()) {
             Spacer(modifier = Modifier.height(8.dp))
             Column(modifier = Modifier.padding(start = 16.dp)) {

@@ -15,7 +15,7 @@ class TrendViewModel : ViewModel() {
     private val _keywords = MutableStateFlow<List<TrendKeyword>>(emptyList())
     val keywords: StateFlow<List<TrendKeyword>> = _keywords.asStateFlow()
     
-    // UI State for loading
+    // 載入狀態的 UI State
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 

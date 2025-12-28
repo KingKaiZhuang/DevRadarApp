@@ -47,7 +47,7 @@ import androidx.compose.ui.unit.dp
 import com.example.devradarapp.model.Article
 import com.example.devradarapp.model.Notification
 
-// ---------------- UI Components ----------------
+// ---------------- UI 元件 ----------------
 
 @Composable
 fun ExploreScreen(
@@ -74,17 +74,17 @@ fun ExploreScreen(
             onDismiss = { showNotificationDialog = false },
             onNotificationClick = { notification -> 
                  onNotificationClick(notification) 
-                 // Optionally keep dialog open or close it
+                 // 選擇性地保持對話框開啟或關閉
             }
         )
     }
 
-    // State for date sorting
+    // 日期排序狀態
     var isNewestFirst by remember { mutableStateOf(true) }
 
     var selectedCategory by remember { mutableStateOf("All") }
     
-    // Dynamically generate categories from the articles list
+    // 從文章列表中動態生成分類
     val categories = remember(articles) {
         val allCategories = articles.mapNotNull { it.category }.distinct().sorted()
         listOf("All") + allCategories
@@ -97,7 +97,7 @@ fun ExploreScreen(
             articles.filter { it.category == selectedCategory }
         }
         
-        // Sort by date
+        // 依日期排序
         if (isNewestFirst) {
             result = result.sortedByDescending { it.date }
         } else {
@@ -116,7 +116,7 @@ fun ExploreScreen(
 
             item { Spacer(modifier = Modifier.height(32.dp)) }
 
-            // Title Row
+            // 標題列
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -131,7 +131,7 @@ fun ExploreScreen(
                     )
                     Spacer(modifier = Modifier.weight(1f))
                     
-                    // Sort Button
+                    // 排序按鈕
                     IconButton(onClick = { isNewestFirst = !isNewestFirst }) {
                         Icon(
                             imageVector = if (isNewestFirst) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
@@ -140,7 +140,7 @@ fun ExploreScreen(
                         )
                     }
 
-                    // Notification Icon with Badge
+                    // 帶有徽章的通知圖示
                     Box {
                         Icon(
                             imageVector = Icons.Default.Notifications,
@@ -182,7 +182,7 @@ fun ExploreScreen(
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // Filters
+            // 篩選器
             item {
                 FiltersRow(
                     categories = categories,
@@ -192,9 +192,9 @@ fun ExploreScreen(
                 Spacer(modifier = Modifier.height(26.dp))
             }
 
-            // Articles
+            // 文章列表
             itemsIndexed(filteredArticles) { index, item ->
-                // Check if we need to load more
+                // 檢查是否需要載入更多
                 if (index == filteredArticles.lastIndex) {
                     onLoadMore()
                 }
@@ -267,7 +267,7 @@ fun ExploreCard(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Top
         ) {
-            // Title
+            // 標題
             Text(
                 text = item.title,
                 color = Color.White,
@@ -291,11 +291,11 @@ fun ExploreCard(
 
         Spacer(modifier = Modifier.height(6.dp))
         
-        // Tag Row: Source + Category
+        // 標籤列：來源 + 分類
         Row(verticalAlignment = Alignment.CenterVertically) {
-            // Source Badge
+            // 來源徽章
             val source = item.source ?: "Unknown"
-            val sourceColor = if (source.equals("Threads", ignoreCase = true)) Color.Black else Color(0xFF007bff) // Black for Threads, Blue for iThome
+            val sourceColor = if (source.equals("Threads", ignoreCase = true)) Color.Black else Color(0xFF007bff) // Threads 為黑色，iThome 為藍色
             val sourceTextColor = Color.White
             
             Box(
@@ -308,7 +308,7 @@ fun ExploreCard(
             }
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Category Badge
+            // 分類徽章
             val cat = item.category ?: "Uncategorized"
             Box(
                 modifier = Modifier
@@ -328,7 +328,7 @@ fun ExploreCard(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Description (Adjusted for Threads)
+        // 描述 (針對 Threads 調整)
         val descColor = if (item.source == "Threads") Color(0xFFE2E8F0) else Color(0xFF94A3B8)
         val descMaxLines = if (item.source == "Threads") 6 else 3
 
@@ -339,7 +339,7 @@ fun ExploreCard(
             maxLines = descMaxLines,
             overflow = TextOverflow.Ellipsis
         )
-        // Metrics Row removed as no longer provided by backend
+        // 指標列已移除，因為後端不再提供
     }
 }
 

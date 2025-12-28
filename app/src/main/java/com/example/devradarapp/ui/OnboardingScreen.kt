@@ -58,7 +58,7 @@ fun OnboardingScreen(
 
             Spacer(modifier = Modifier.height(80.dp))
 
-            // Logo
+            // 標誌
             Box(
                 modifier = Modifier
                     .size(iconSize)
@@ -76,7 +76,7 @@ fun OnboardingScreen(
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // Title
+            // 標題
             Text(
                 text = "輕鬆保持領先",
                 style = MaterialTheme.typography.headlineMedium.copy(
@@ -88,7 +88,7 @@ fun OnboardingScreen(
 
             Spacer(modifier = Modifier.height(36.dp))
 
-            // Features
+            // 功能介紹
             FeatureItem(
                 icon = Icons.Default.CalendarMonth,
                 title = "每日技術摘要",
@@ -107,7 +107,7 @@ fun OnboardingScreen(
 
             Spacer(modifier = Modifier.height(48.dp))
 
-            // General Login
+            // 一般登入
             LoginButton(
                 text = "登入 / 註冊",
                 icon = Icons.Default.Login,

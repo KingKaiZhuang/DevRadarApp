@@ -38,7 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.devradarapp.model.FavoriteEntity
-import com.example.devradarapp.utils.BrowserUtils
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -99,10 +99,10 @@ fun FavoritesScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 items(favorites) { item ->
-                    // Map FavoriteEntity to Article for UI display
+                    // 將 FavoriteEntity 映射到 Article 以供 UI 顯示
                     val article = com.example.devradarapp.model.Article(
                         title = item.title,
-                        desc = "", // No description in FavoriteEntity
+                        desc = "", // FavoriteEntity 中沒有詳細描述
                         url = item.articleUrl,
                         author = item.author,
                         date = item.date,
@@ -114,7 +114,7 @@ fun FavoritesScreen(
 
                     ExploreCard(
                         item = article,
-                        isFavorite = true, // Always favorite in this screen
+                        isFavorite = true, // 在此頁面中永遠是已收藏
                         onClick = { _ -> onArticleClick(item.articleUrl) },
                         onFavoriteClick = { onRemoveClick(item.articleUrl) }
                     )
@@ -123,4 +123,4 @@ fun FavoritesScreen(
         }
     }
 }
-// FavoriteItemCard removed
+

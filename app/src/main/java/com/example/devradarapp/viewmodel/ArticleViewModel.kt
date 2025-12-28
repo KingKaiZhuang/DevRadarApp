@@ -19,11 +19,11 @@ class ArticleViewModel(application: Application) : AndroidViewModel(application)
     private val repository: ArticleRepository
     private val webSocketManager = com.example.devradarapp.network.WebSocketManager()
     private var currentUserId: Int? = null
-    // Guest ID: use negative random integer if not logged in
+    // 訪客 ID：如果未登入，使用負數隨機整數
     private val guestId: Int by lazy {
         -(java.util.Random().nextInt(1000000) + 1)
     }
-    // Track which article the user is currently looking at
+    // 追蹤使用者目前正在查看的文章
     private var currentViewingArticleUrl: String? = null
 
     // 1. 儲存當前使用者的收藏文章 URL 集合 (用於快速判斷是否已收藏，例如顯示愛心顏色)
@@ -38,11 +38,19 @@ class ArticleViewModel(application: Application) : AndroidViewModel(application)
     private val _articles = MutableStateFlow<List<Article>>(emptyList())
     val articles: StateFlow<List<Article>> = _articles.asStateFlow()
 
-    // Pagination State
+    // 分頁狀態
     private var currentSkip = 0
     private val pageSize = 20
     private var isEndOfList = false
+
     private var isLoadingMore = false
+
+    // AI 助手狀態
+    private val _aiResponse = MutableStateFlow<String?>(null)
+    val aiResponse: StateFlow<String?> = _aiResponse.asStateFlow()
+
+    private val _isAiLoading = MutableStateFlow(false)
+    val isAiLoading: StateFlow<Boolean> = _isAiLoading.asStateFlow()
 
     init {
         val database = AppDatabase.getDatabase(application)
@@ -69,23 +77,41 @@ class ArticleViewModel(application: Application) : AndroidViewModel(application)
             isEndOfList = false
         }
 
+        val prefs = getApplication<Application>().getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+        val isIThome = prefs.getBoolean("source_ithome", true)
+        val isThreads = prefs.getBoolean("source_threads", true)
+
         viewModelScope.launch {
             val newArticles = repository.loadArticles(skip = currentSkip, limit = pageSize)
             
             if (newArticles.isEmpty()) {
                 isEndOfList = true
             } else {
-                // isNew logic removed
-
+                // 在本地端應用篩選
+                // 注意：分頁會持續獲取原始頁面。
+                // 如果我們進行過濾，顯示的項目可能會少於 pageSize。
+                // 在理想情況下，我們應該獲取更多資料直到足夠為止。
+                // 為了 MVP (最小可行性產品)，我們僅顯示符合的項目。
+                
+                val filtered = newArticles.filter { article ->
+                    val src = article.source?.lowercase() ?: "unknown"
+                    val allowIThome = isIThome && (src.contains("ithome") || src == "unknown") // 將未知來源視為 iThome/預設
+                    val allowThreads = isThreads && (src.contains("threads") || src.contains("thread"))
+                    
+                    allowIThome || allowThreads
+                }
 
                 if (reset) {
-                    _articles.value = newArticles
+                    _articles.value = filtered
                 } else {
-                    _articles.value = _articles.value + newArticles
+                    _articles.value = _articles.value + filtered
                 }
                 
-                // Increment skip for next page
+                // 根據原始計數增加下一頁的 skip，以避免後端分頁中出現重複或缺漏
                 currentSkip += newArticles.size
+                
+                // 最佳化：如果過濾結果為空但尚未到達列表末尾，是否自動載入下一頁？
+                // 為了簡單起見並避免遞迴深度問題，此處省略，使用者可以滑動來觸發下一頁。
             }
             isLoadingMore = false
         }
@@ -140,7 +166,7 @@ class ArticleViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // ---------------- Notification Logic ----------------
+    // ---------------- 通知邏輯 ----------------
     private val _unreadNotificationCount = MutableStateFlow(0)
     val unreadNotificationCount: StateFlow<Int> = _unreadNotificationCount.asStateFlow()
 
@@ -163,7 +189,7 @@ class ArticleViewModel(application: Application) : AndroidViewModel(application)
     fun connectWebSocket(userId: Int?) {
         val idToConnect = userId ?: guestId
         
-        // If switching user/guest, close previous connection first
+        // 如果切換使用者/訪客，先關閉先前的連線
         if (currentUserId != idToConnect) {
             webSocketManager.close()
         }
@@ -173,7 +199,7 @@ class ArticleViewModel(application: Application) : AndroidViewModel(application)
         
         webSocketManager.onMessageReceived = { message ->
             if (message.contains("NOTIFICATION")) {
-                // Refresh notifications (Guest will just get empty list, which is fine)
+                // 重新整理通知 (訪客只會收到空列表，這沒問題)
                 loadNotifications(idToConnect)
                 viewModelScope.launch {
                     _newNotificationTrigger.emit(Unit)
@@ -196,12 +222,12 @@ class ArticleViewModel(application: Application) : AndroidViewModel(application)
     fun markNotificationRead(notification: com.example.devradarapp.model.Notification) {
         viewModelScope.launch {
             repository.markNotificationRead(notification.id)
-            // Local update to remove from list or mark read
+            // 本地更新以從列表中移除或標記為已讀
             loadNotifications(notification.userId)
         }
     }
 
-    // ---------------- Comment Logic ----------------
+    // ---------------- 留言邏輯 ----------------
 
     private val _currentComments = MutableStateFlow<List<com.example.devradarapp.model.Comment>>(emptyList())
     val currentComments: StateFlow<List<com.example.devradarapp.model.Comment>> = _currentComments.asStateFlow()
@@ -230,17 +256,36 @@ class ArticleViewModel(application: Application) : AndroidViewModel(application)
                 parentId = parentId
             )
             repository.addComment(articleUrl, newComment)
-            // Reload to update UI
+            // 重新載入以更新 UI
             loadComments(articleUrl)
             
-            // In a real app, we might get a push notification. 
-            // Here we simulate checking notifications immediately for the "other" user
-            // But since we are likely the same user testing, we can reload our own notifications to see if we got one (self-reply case)
+            // 在真實應用中，我們可能會收到推播通知。
+            // 這裡我們模擬立即檢查「另一個」使用者的通知
+            // 但因為我們很可能是同一個使用者在測試，我們可以重新載入自己的通知看是否有收到 (自我回覆的情況)
             loadNotifications(user.id) 
         }
     }
 
     fun getUserIdForSession(user: UserEntity?): Int {
         return user?.id ?: guestId
+    }
+
+    fun askAi(prompt: String, articleContent: String) {
+        viewModelScope.launch {
+            _isAiLoading.value = true
+            _aiResponse.value = null // 清除先前的回應
+            try {
+                val response = repository.askAi(prompt, articleContent)
+                _aiResponse.value = response
+            } catch (e: Exception) {
+                _aiResponse.value = "Error: ${e.message}"
+            } finally {
+                _isAiLoading.value = false
+            }
+        }
+    }
+
+    fun clearAiResponse() {
+        _aiResponse.value = null
     }
 }

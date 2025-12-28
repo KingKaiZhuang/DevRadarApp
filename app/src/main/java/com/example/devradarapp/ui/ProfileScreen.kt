@@ -82,8 +82,8 @@ fun ProfileScreen(
     onClose: () -> Unit,
     onLogout: () -> Unit,
     onFavoritesClick: () -> Unit = {}, // 新增：點擊收藏的回呼
-    onTrendsClick: () -> Unit = {}, // New callback for trends
-    // In real app, we might injected viewModel via Hilt, here using default factories provided by compose
+    onTrendsClick: () -> Unit = {}, // 新增：點擊趨勢的回呼
+
     authViewModel: AuthViewModel = viewModel(),
     profileViewModel: ProfileViewModel = viewModel()
 ) {
@@ -92,7 +92,7 @@ fun ProfileScreen(
     
     val uploadState by profileViewModel.uploadState.collectAsState()
     
-    // Photo Picker
+    // 圖片選擇器
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri ->
@@ -105,9 +105,8 @@ fun ProfileScreen(
         }
     )
     
-    // Handle Loading State overlay or similar?
-    // For now, simpler: show indicator on top or inside ProfileSection?
-    // Let's just pass `onImageClick` to ProfileSection.
+    // 處理圖片選擇結果
+
 
     Scaffold(
         containerColor = DarkBg,
@@ -163,39 +162,9 @@ fun ProfileScreen(
                 Spacer(modifier = Modifier.height(32.dp))
             }
 
-            // 2. Areas of Interest
-            Text(
-                text = "Areas of Interest",
-                color = TextWhite,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
-            // ... (略，保持原有內容)
-            Text(
-                text = "Select topics to personalize your article feed.",
-                color = TextGrey,
-                fontSize = 14.sp,
-                modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
-            )
 
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                val interests = listOf(
-                    "AI/ML" to true, "Frontend" to false, "DevOps" to false, "JavaScript" to true,
-                    "Python" to false, "Cloud Computing" to false, "Cybersecurity" to true
-                )
 
-                interests.forEach { (name, isSelected) ->
-                    InterestChip(text = name, isSelected = isSelected)
-                }
-                AddMoreChip()
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // 3. Data Sources
+            // 2. 資料來源
             Text(
                 text = "Data Sources",
                 color = TextWhite,
@@ -204,7 +173,7 @@ fun ProfileScreen(
                 modifier = Modifier.padding(bottom = 12.dp)
             )
 
-            DataSourceCard()
+            DataSourceCard(profileViewModel)
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -269,16 +238,7 @@ fun ProfileSection(
             contentAlignment = Alignment.Center
         ) {
             if (avatarUrl != null) {
-                // Use Coil AsyncImage
-                // Note: Need to prepend base URL if it's relative?
-                // The backend saves "static/uploads/...", but Retrofit BaseURL is http://10.0.2.2:8000/
-                // So full URL is http://10.0.2.2:8000/static/uploads/...
-                // My database.update_user_avatar saves "/static/uploads/..." (with leading slash)
-                // So logic: BaseURL (without slash at end if we want) + string.
-                // Retrofit BASE_URL is "http://10.0.2.2:8000/"
-                // avatarUrl is "/static/uploads/..."
-                // Concatenation: "http://10.0.2.2:8000//static..." -> double slash is fine usually but let's be cleaner if we can.
-                // Or just use full URL.
+                // 確保 URL 包含 Base URL
                 val fullUrl = if (avatarUrl.startsWith("http")) avatarUrl else "http://10.0.2.2:8000$avatarUrl"
                 
                 coil.compose.AsyncImage(
@@ -310,51 +270,7 @@ fun ProfileSection(
     }
 }
 
-@Composable
-fun InterestChip(text: String, isSelected: Boolean) {
-    val bgColor = if (isSelected) AccentBlue else CardBg
-    val textColor = TextWhite
 
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(bgColor)
-            .clickable { }
-            .padding(horizontal = 16.dp, vertical = 10.dp)
-    ) {
-        Text(
-            text = text,
-            color = textColor,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium
-        )
-    }
-}
-
-@Composable
-fun AddMoreChip() {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .border(1.dp, Color(0xFF3E4352), RoundedCornerShape(8.dp))
-            .clickable { }
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-    ) {
-        Icon(
-            imageVector = Icons.Default.Add,
-            contentDescription = null,
-            tint = TextGrey,
-            modifier = Modifier.size(16.dp)
-        )
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(
-            text = "Add more",
-            color = TextGrey,
-            fontSize = 14.sp
-        )
-    }
-}
 
 // 新增：通用的選單按鈕
 @Composable
@@ -389,27 +305,32 @@ fun MenuButton(title: String, icon: androidx.compose.ui.graphics.vector.ImageVec
 }
 
 @Composable
-fun DataSourceCard() {
+fun DataSourceCard(profileViewModel: ProfileViewModel = viewModel()) {
+    val isIThomeEnabled by profileViewModel.isIThomeEnabled.collectAsState()
+    val isThreadsEnabled by profileViewModel.isThreadsEnabled.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(CardBg)
     ) {
-        DataSourceItem("Medium", true)
+        DataSourceItem(
+            title = "iThome", 
+            isChecked = isIThomeEnabled,
+            onCheckedChange = { profileViewModel.toggleIThome(it) }
+        )
         HorizontalDivider(color = DividerColor, thickness = 1.dp)
-        DataSourceItem("Thread", true)
-        HorizontalDivider(color = DividerColor, thickness = 1.dp)
-        DataSourceItem("GitHub Trending", true)
-        HorizontalDivider(color = DividerColor, thickness = 1.dp)
-        DataSourceItem("Reddit", false)
+        DataSourceItem(
+            title = "Threads", 
+            isChecked = isThreadsEnabled,
+            onCheckedChange = { profileViewModel.toggleThreads(it) }
+        )
     }
 }
 
 @Composable
-fun DataSourceItem(title: String, initialChecked: Boolean) {
-    var checked by remember { mutableStateOf(initialChecked) }
-
+fun DataSourceItem(title: String, isChecked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -423,8 +344,8 @@ fun DataSourceItem(title: String, initialChecked: Boolean) {
             fontSize = 16.sp
         )
         Switch(
-            checked = checked,
-            onCheckedChange = { checked = it },
+            checked = isChecked,
+            onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = TextWhite,
                 checkedTrackColor = AccentBlue,

@@ -24,6 +24,17 @@ data class UploadResponse(
     val url: String
 )
 
+@Serializable
+data class AiRequest(
+    val user_prompt: String,
+    val article_content: String
+)
+
+@Serializable
+data class AiResponse(
+    val reply: String
+)
+
 interface ApiService {
     @GET("articles")
     suspend fun getArticles(
@@ -53,4 +64,7 @@ interface ApiService {
         @Path("userId") userId: Int,
         @Part file: MultipartBody.Part
     ): UploadResponse
+
+    @POST("ai/chat")
+    suspend fun askAi(@Body request: AiRequest): AiResponse
 }

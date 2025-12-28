@@ -68,6 +68,7 @@ fun AppNavHost(
     LaunchedEffect(currentUser) {
         if (currentUser != null) {
             articleViewModel.loadFavorites(currentUser!!.id)
+            articleViewModel.loadNotifications(currentUser!!.id)
 
             // 自動跳轉邏輯
             val currentRoute = navController.currentBackStackEntry?.destination?.route
@@ -102,7 +103,7 @@ fun AppNavHost(
         }
 
         // --------------------------
-        // Login
+        // 登入
         // --------------------------
         composable("login") {
             LoginScreen(
@@ -115,16 +116,16 @@ fun AppNavHost(
         // Explore Page (整合收藏功能)
         // --------------------------
                 composable("explore") {
-                    // Notification State
+                    // 通知狀態
                     val notificationCount by articleViewModel.unreadNotificationCount.collectAsState()
                     val notifications by articleViewModel.notifications.collectAsState()
                     
-                    // Connect WebSocket for real-time updates (Logged in OR Guest)
+                    // 連接 WebSocket 進行即時更新 (已登入或訪客)
                     LaunchedEffect(currentUser) {
                         articleViewModel.connectWebSocket(currentUser?.id)
                     }
                     
-                    // Show Toast on new notification
+                    // 顯示新通知的 Toast
                     val context = androidx.compose.ui.platform.LocalContext.current
                     LaunchedEffect(Unit) {
                         articleViewModel.newNotificationTrigger.collect {
@@ -152,7 +153,7 @@ fun AppNavHost(
                         notifications = notifications,
                         onNotificationClick = { notification ->
                             articleViewModel.markNotificationRead(notification)
-                            // Navigate to article if url exists
+                            // 如果 URL 存在，導航至文章
                             if (notification.articleUrl != null) {
                                 val encodedUrl = java.net.URLEncoder.encode(notification.articleUrl, java.nio.charset.StandardCharsets.UTF_8.toString())
                                 navController.navigate("article_detail/$encodedUrl")
@@ -173,7 +174,10 @@ fun AppNavHost(
         composable("profile") {
             ProfileScreen(
                 currentUser = currentUser,
-                onClose = { navController.popBackStack() },
+                onClose = { 
+                    articleViewModel.refreshArticles()
+                    navController.popBackStack() 
+                },
                 onLogout = {
                     authViewModel.logout()
                     navController.navigate("onboarding") {
@@ -228,7 +232,7 @@ fun AppNavHost(
         // --------------------------
         composable("article_detail/{articleUrl}") { backStackEntry ->
             val articleUrl = backStackEntry.arguments?.getString("articleUrl") ?: ""
-            // URL decoding might be needed if complex URLs are passed
+            // 如果傳遞了複雜的 URL，可能需要 URL 解碼
             val decodedUrl = java.net.URLDecoder.decode(articleUrl, java.nio.charset.StandardCharsets.UTF_8.toString())
 
             com.example.devradarapp.ui.ArticleDetailScreen(

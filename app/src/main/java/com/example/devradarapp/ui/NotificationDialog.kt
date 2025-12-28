@@ -31,7 +31,7 @@ fun NotificationDialog(
                 .fillMaxWidth()
                 .height(400.dp),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)) // Dark theme
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)) // 深色主題
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
